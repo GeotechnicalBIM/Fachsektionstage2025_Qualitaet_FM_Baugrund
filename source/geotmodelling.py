@@ -28,6 +28,7 @@ def create_cuboid(xmin, ymin, zmin, xmax, ymax, zmax):
     ]
     return vertices, faces
 
+
 def interpolate_rbf(data_xyz, xmin=None, xmax=None, ymin=None, ymax=None, grid_x=1, grid_y=1): 
     """
     data_xyz:list -> [xpos of borehole, ypos of borehole, z-value used for interpolation]
@@ -57,9 +58,6 @@ def interpolate_rbf(data_xyz, xmin=None, xmax=None, ymin=None, ymax=None, grid_x
     ygrid = yflat.reshape(xgrid.shape[1], xgrid.shape[2])
 
     return *xgrid, ygrid
-
-
-
 
 
 def prepare_points_from_connections(bh_data, above, below):

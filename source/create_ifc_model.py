@@ -17,9 +17,8 @@ if dir_path not in sys.path:
 
 from ifcutils import IfcUtils
 from blenderutils import BlenderUtils
-from geotmodelling import *
-#from geotmodelling import interpolate_rbf, create_cuboid, prepare_points_from_connections, prepare_grid_to_mesh
-from geotmodelling import interpolate_rbf
+from geotmodelling import interpolate_rbf, create_cuboid, prepare_points_from_connections, prepare_grid_to_mesh
+
 
 # Load project specific data
 with open(parent_path+"/project_data/bh_data.json", encoding="Latin1") as f:
@@ -40,8 +39,6 @@ for i in bpy.data.objects:
     bpy.data.objects.remove(i, do_unlink=True)
 for i in bpy.data.collections:
     bpy.data.collections.remove(i, do_unlink=True)
-
-
 
 
 
@@ -170,10 +167,11 @@ vertices, faces = prepare_grid_to_mesh(x_rbf, y_rbf, z_rbf)
 _, topo_mesh = BlenderUtils.add_testmesh(vertices, faces, name="Topo")
 
 
-
+m1, m2, _ = BlenderUtils.split_with_surface(mesh_name="Main", surface_name="Topo", keep_original_mesh=False)
 
 # Save file and load the project
 fp = parent_path+"/project_data/script_output_4x3.ifc"
 model.write(fp)
 
 proj = bpy.ops.bim.load_project(filepath=fp, use_relative_path=False, should_start_fresh_session=False)
+
