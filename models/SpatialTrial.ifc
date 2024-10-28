@@ -1,0 +1,18 @@
+ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('ViewDefinition [CoordinationView]'),'2;1');
+FILE_NAME('','2024-10-17T15:15:12',(),(),'IfcOpenShell 0.8.0','IfcOpenShell 0.8.0','');
+FILE_SCHEMA(('IFC4'));
+ENDSEC;
+DATA;
+#1=IFCPROJECT('2YjV4$CzPFsgAgz7p8Q4Wa',$,'Spatial Structure Trial',$,$,$,$,$,#7);
+#2=IFCSITE('1Q1lfNkpL8hQA7XxuG32Pr',$,'TrialSite',$,$,$,$,$,$,$,$,$,$,$);
+#3=IFCBUILDING('1enHtcZvbE$uKNWVD4tZo5',$,'OpenPort',$,$,$,$,$,$,$,$,$);
+#4=IFCSIUNIT(*,.LENGTHUNIT.,.MILLI.,.METRE.);
+#5=IFCSIUNIT(*,.AREAUNIT.,$,.SQUARE_METRE.);
+#6=IFCSIUNIT(*,.VOLUMEUNIT.,$,.CUBIC_METRE.);
+#7=IFCUNITASSIGNMENT((#6,#4,#5));
+#8=IFCRELAGGREGATES('06_OJB2en72eA5epmUg_fx',$,$,$,#1,(#2));
+#9=IFCRELAGGREGATES('3LpcWdxHn9ifZL5qTXzk$i',$,$,$,#2,(#3));
+ENDSEC;
+END-ISO-10303-21;
