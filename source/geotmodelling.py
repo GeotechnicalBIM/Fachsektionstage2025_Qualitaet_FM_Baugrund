@@ -72,14 +72,14 @@ def prepare_points_from_connections(bh_data, above, below):
     for bh in bh_data:
         hgs = bh["Layerdata"]["Hauptgruppen"]
         if above not in hgs:
-            print("Above not Found")
+            #print("Above not Found")
             continue
         ind = len(hgs) - 1 - hgs[::-1].index(above)
         if ind == len(hgs)-1:
             continue
         
         hauptgruppe_below = hgs[ind+1]
-        print("\t", hauptgruppe_below)
+        #print("\t", hauptgruppe_below)
         if hauptgruppe_below in below:
             x_data.append(bh["x"])
             y_data.append(bh["y"])

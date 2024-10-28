@@ -166,8 +166,24 @@ x_rbf, y_rbf, z_rbf = interpolate_rbf(xyz_data, xmin = x_min, ymin = y_min, xmax
 vertices, faces = prepare_grid_to_mesh(x_rbf, y_rbf, z_rbf)             
 _, topo_mesh = BlenderUtils.add_testmesh(vertices, faces, name="Topo")
 
+# Contact points from Fill to all other points.
+x_data, y_data, z_data = prepare_points_from_connections(bh_data, "A", ["S", "G"])    
+xyz_data = list(zip(x_data, y_data, z_data))
+x_rbf, y_rbf, z_rbf = interpolate_rbf(xyz_data, xmin = x_min, ymin = y_min, xmax = x_max, ymax = y_max)
+vertices, faces = prepare_grid_to_mesh(x_rbf, y_rbf, z_rbf)             
+BlenderUtils.add_testmesh(vertices, faces)
 
-m1, m2, _ = BlenderUtils.split_with_surface(mesh_name="Main", surface_name="Topo", keep_original_mesh=False)
+# Contact points from S to G.
+x_data, y_data, z_data = prepare_points_from_connections(bh_data, "G", ["S"])    
+print(x_data)
+xyz_data = list(zip(x_data, y_data, z_data))
+x_rbf, y_rbf, z_rbf = interpolate_rbf(xyz_data, xmin = x_min, ymin = y_min, xmax = x_max, ymax = y_max)
+vertices, faces = prepare_grid_to_mesh(x_rbf, y_rbf, z_rbf)             
+BlenderUtils.add_testmesh(vertices, faces)
+    
+
+
+m1, m2, org_mesh, org_surface = BlenderUtils.split_with_surface(mesh_name="Main", surface_name="Topo", keep_original_mesh=True, keep_original_surface=True)
 
 # Save file and load the project
 fp = parent_path+"/project_data/script_output_4x3.ifc"

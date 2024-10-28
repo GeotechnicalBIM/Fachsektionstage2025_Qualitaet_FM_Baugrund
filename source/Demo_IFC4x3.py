@@ -374,7 +374,8 @@ for bh_ind, bh_dict in enumerate(bh_data):
     ifc_subelements.append(bh_layer_sublist)        
 #run("aggregate.assign_object", file=model, products = ifc_bhs, relating_object=storey)
 run("spatial.assign_container", file=model, products = ifc_bhs, relating_structure=storey)
-        
+
+
 # Assign materials by Hauptgruppe. Note: Hauptgruppen have been mapped to material names prior      
 layer_elems = [i for j in ifc_subelements for i in j]
 hgs = []
@@ -388,8 +389,6 @@ for k, v in mapping_hg_to_materialname.items():
     material = [i for i in model.by_type('IfcMaterial') if i.Name == v][0]   
     ifcopenshell.api.material.assign_material(model, products=element_collector, material=material)    
         
-
-
 
 
 

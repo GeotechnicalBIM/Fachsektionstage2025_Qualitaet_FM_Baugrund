@@ -40,7 +40,7 @@ class BlenderUtils:
         return visited
     
     @staticmethod
-    def split_with_surface(mesh_name, surface_name, keep_original_mesh=True):
+    def split_with_surface(mesh_name, surface_name, keep_original_mesh=True, keep_original_surface=True):
         """
         This method is used to split one closed mesh with one surface like open mesh into
         two closed meshes.
@@ -80,6 +80,15 @@ class BlenderUtils:
             new_obj = src_obj.copy()
             new_obj.data = src_obj.data.copy()
             new_obj.name = mesh_name + "_org"
+            new_obj.animation_data_clear()
+            C.collection.objects.link(new_obj)
+
+        if keep_original_surface:
+            src_obj = bpy.data.objects[surface_name]
+            C = bpy.context  
+            new_obj = src_obj.copy()
+            new_obj.data = src_obj.data.copy()
+            new_obj.name = surface_name + "_org"
             new_obj.animation_data_clear()
             C.collection.objects.link(new_obj)
 
@@ -186,10 +195,18 @@ class BlenderUtils:
         bpy.ops.object.mode_set(mode="OBJECT")
 
 
-        if not keep_original_mesh:
-            return bpy.data.objects[mesh_name+"_1"], bpy.data.objects[mesh_name+"_2"], None
+        if keep_original_mesh:
+            org_mesh = bpy.data.objects[mesh_name+"_org"]
         else:
-            return bpy.data.objects[mesh_name+"_1"], bpy.data.objects[mesh_name+"_2"], bpy.data.objects[mesh_name+"_2"]
+            org_mesh = None
+        
+        if keep_original_surface:
+            org_surface = bpy.data.objects[surface_name+"_org"]
+        else: 
+            org_surface = None
+
+        
+        return bpy.data.objects[mesh_name+"_1"], bpy.data.objects[mesh_name+"_2"], org_mesh, org_surface
 
 
 
