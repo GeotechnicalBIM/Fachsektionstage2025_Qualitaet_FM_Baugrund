@@ -143,6 +143,8 @@ for k, v in mapping_hg_to_materialname.items():
 
 
 # CREATE THE SUBSOIL VOLUMES
+# USING THE STACKED SURFACE APPROACH
+
 
 # Create the meshes for soil volumes
 # Set model extents.
@@ -154,13 +156,11 @@ z_min, z_max = min([i["OK"] - i["Layerdata"]["UKs"][-1] for i in bh_data]) - 1, 
 base_v, base_f = create_cuboid(x_min+1, y_min+1, z_min-1, x_max-2, y_max-2, z_max+2) # reduce size so intersection is granted
 _, cuboid_mesh = BlenderUtils.add_testmesh(base_v, base_f, name="Main")
 
-# Using the stacked surface apporach.
 
+# Topography
 x_data = [i["x"] for i in bh_data]
 y_data = [i["y"] for i in bh_data]
 z_data = [i["OK"] for i in bh_data]
-
-# Topography
 xyz_data = list(zip(x_data, y_data, z_data))
 x_rbf, y_rbf, z_rbf = interpolate_rbf(xyz_data, xmin = x_min, ymin = y_min, xmax = x_max, ymax = y_max)
 vertices, faces = prepare_grid_to_mesh(x_rbf, y_rbf, z_rbf)             
@@ -175,12 +175,38 @@ BlenderUtils.add_testmesh(vertices, faces)
 
 # Contact points from S to G.
 x_data, y_data, z_data = prepare_points_from_connections(bh_data, "G", ["S"])    
-print(x_data)
 xyz_data = list(zip(x_data, y_data, z_data))
 x_rbf, y_rbf, z_rbf = interpolate_rbf(xyz_data, xmin = x_min, ymin = y_min, xmax = x_max, ymax = y_max)
 vertices, faces = prepare_grid_to_mesh(x_rbf, y_rbf, z_rbf)             
 BlenderUtils.add_testmesh(vertices, faces)
     
+
+# Create a collection for all the surfaces, that will be used for cutting
+# Sort them in the cutting order.
+
+###
+
+
+
+
+
+
+###
+
+
+
+#
+
+
+
+# PERFORM THE CUTTING. KEEP THE SURFACES IN THEIR COLLECETION
+
+###
+###
+###
+
+#
+
 
 
 m1, m2, org_mesh, org_surface = BlenderUtils.split_with_surface(mesh_name="Main", surface_name="Topo", keep_original_mesh=True, keep_original_surface=True)
