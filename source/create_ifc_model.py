@@ -19,7 +19,7 @@ from ifcutils import IfcUtils
 from blenderutils import BlenderUtils
 from geotmodelling import *
 #from geotmodelling import interpolate_rbf, create_cuboid, prepare_points_from_connections, prepare_grid_to_mesh
-
+from geotmodelling import interpolate_rbf
 
 # Load project specific data
 with open(parent_path+"/project_data/bh_data.json", encoding="Latin1") as f:

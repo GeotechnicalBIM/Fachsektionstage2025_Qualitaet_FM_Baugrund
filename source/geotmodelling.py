@@ -1,6 +1,33 @@
 import numpy as np
 from scipy.interpolate import RBFInterpolator, griddata
 
+def create_cuboid(xmin, ymin, zmin, xmax, ymax, zmax):
+    """
+    Compute vertices and faces for a world alligned cuboid given its min and max points
+    """
+    # Define the 8 vertices of the cuboid
+    vertices = [
+        (xmin, ymin, zmin),  # Bottom face (4 vertices)
+        (xmax, ymin, zmin),
+        (xmax, ymax, zmin),
+        (xmin, ymax, zmin),
+        (xmin, ymin, zmax),  # Top face (4 vertices)
+        (xmax, ymin, zmax),
+        (xmax, ymax, zmax),
+        (xmin, ymax, zmax)
+    ]
+    
+    # Define the faces of the cuboid, using the vertices
+    faces = [
+        (0, 1, 2, 3),  # Bottom face
+        (4, 5, 6, 7),  # Top face
+        (0, 1, 5, 4),  # Side face 1
+        (1, 2, 6, 5),  # Side face 2
+        (2, 3, 7, 6),  # Side face 3
+        (3, 0, 4, 7)   # Side face 4
+    ]
+    return vertices, faces
+
 def interpolate_rbf(data_xyz, xmin=None, xmax=None, ymin=None, ymax=None, grid_x=1, grid_y=1): 
     """
     data_xyz:list -> [xpos of borehole, ypos of borehole, z-value used for interpolation]
@@ -32,32 +59,7 @@ def interpolate_rbf(data_xyz, xmin=None, xmax=None, ymin=None, ymax=None, grid_x
     return *xgrid, ygrid
 
 
-def create_cuboid(xmin, ymin, zmin, xmax, ymax, zmax):
-    """
-    Compute vertices and faces for a world alligned cuboid given its min and max points
-    """
-    # Define the 8 vertices of the cuboid
-    vertices = [
-        (xmin, ymin, zmin),  # Bottom face (4 vertices)
-        (xmax, ymin, zmin),
-        (xmax, ymax, zmin),
-        (xmin, ymax, zmin),
-        (xmin, ymin, zmax),  # Top face (4 vertices)
-        (xmax, ymin, zmax),
-        (xmax, ymax, zmax),
-        (xmin, ymax, zmax)
-    ]
-    
-    # Define the faces of the cuboid, using the vertices
-    faces = [
-        (0, 1, 2, 3),  # Bottom face
-        (4, 5, 6, 7),  # Top face
-        (0, 1, 5, 4),  # Side face 1
-        (1, 2, 6, 5),  # Side face 2
-        (2, 3, 7, 6),  # Side face 3
-        (3, 0, 4, 7)   # Side face 4
-    ]
-    return vertices, faces
+
 
 
 def prepare_points_from_connections(bh_data, above, below):
