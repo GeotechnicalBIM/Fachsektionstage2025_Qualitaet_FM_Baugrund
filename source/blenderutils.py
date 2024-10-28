@@ -6,6 +6,17 @@ class BlenderUtils:
         pass
 
     @staticmethod
+    def add_testmesh(vertices, faces, name="testmesh"):
+        """Quick util function for development. Adds a mesh to the scene"""
+        mesh = bpy.data.meshes.new(name)
+        mesh.from_pydata(vertices, [], faces)
+        mesh.update()
+        obj = bpy.data.objects.new(name, mesh)
+        scene = bpy.context.scene
+        scene.collection.objects.link(obj)
+        return obj, mesh
+
+    @staticmethod
     def detectByFaces():
         """
         Find isolated parts of a mesh by faces from the current object from the edit context

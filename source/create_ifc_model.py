@@ -16,6 +16,9 @@ if dir_path not in sys.path:
     sys.path.append(dir_path)
 
 from ifcutils import IfcUtils
+from blenderutils import BlenderUtils
+from geotmodelling import *
+#from geotmodelling import interpolate_rbf, create_cuboid, prepare_points_from_connections, prepare_grid_to_mesh
 
 
 # Load project specific data
@@ -137,6 +140,36 @@ for k, v in mapping_hg_to_materialname.items():
             element_collector.append(layer_elems[object_ind])
     material = [i for i in model.by_type('IfcMaterial') if i.Name == v][0]   
     ifcopenshell.api.material.assign_material(model, products=element_collector, material=material)    
+
+
+
+
+
+# CREATE THE SUBSOIL VOLUMES
+
+# Create the meshes for soil volumes
+# Set model extents.
+x_min, x_max = min([i["x"] for i in bh_data])-2, max([i["x"] for i in bh_data])+3
+y_min, y_max = min([i["y"] for i in bh_data])-2, max([i["y"] for i in bh_data])+3
+z_min, z_max = min([i["OK"] - i["Layerdata"]["UKs"][-1] for i in bh_data]) - 1,  max([i["OK"] for i in bh_data])+1
+
+# create base model
+base_v, base_f = create_cuboid(x_min+1, y_min+1, z_min-1, x_max-2, y_max-2, z_max+2) # reduce size so intersection is granted
+_, cuboid_mesh = BlenderUtils.add_testmesh(base_v, base_f, name="Main")
+
+# Using the stacked surface apporach.
+
+x_data = [i["x"] for i in bh_data]
+y_data = [i["y"] for i in bh_data]
+z_data = [i["OK"] for i in bh_data]
+
+# Topography
+xyz_data = list(zip(x_data, y_data, z_data))
+x_rbf, y_rbf, z_rbf = interpolate_rbf(xyz_data, xmin = x_min, ymin = y_min, xmax = x_max, ymax = y_max)
+vertices, faces = prepare_grid_to_mesh(x_rbf, y_rbf, z_rbf)             
+_, topo_mesh = BlenderUtils.add_testmesh(vertices, faces, name="Topo")
+
+
 
 
 # Save file and load the project
