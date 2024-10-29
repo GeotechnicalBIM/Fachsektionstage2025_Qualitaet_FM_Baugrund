@@ -6,7 +6,7 @@ import mathutils
 import sys
 import os
 import numpy as np
-
+import random
 
 # local imports. looks a bit weird, but as the code is executed in blender we have to add the paths manually
 
@@ -17,7 +17,7 @@ if dir_path not in sys.path:
 
 from ifcutils import IfcUtils
 from blenderutils import BlenderUtils
-from geotmodelling import interpolate_rbf, create_cuboid, prepare_points_from_connections, prepare_grid_to_mesh
+from geotmodelling import interpolate_rbf, create_cuboid, prepare_points_from_connections, prepare_grid_to_mesh, create_fake_topography, create_topography_with_influence
 
 
 # Load project specific data
@@ -178,6 +178,13 @@ z_data = [i["OK"] for i in bh_data]
 xyz_data = list(zip(x_data, y_data, z_data))
 x_rbf, y_rbf, z_rbf = interpolate_rbf(xyz_data, xmin = x_min, ymin = y_min, xmax = x_max, ymax = y_max)
 vertices, faces = prepare_grid_to_mesh(x_rbf, y_rbf, z_rbf)             
+
+for v_ind, v in enumerate(vertices): # this would be much prettier with perlin noise or something like that
+    if v[2]<min(z_data):
+        vertices[v_ind] = [v[0], v[1], min(z_data) + 0.1* random.random()]
+    else:
+        vertices[v_ind] = [v[0], v[1], v[2] + 0.1* random.random() - 0.1*random.random()]
+
 topo_obj, topo_mesh = BlenderUtils.add_testmesh(vertices, faces, name="Topo")
 bpy.data.collections[topo_coll_name].objects.link(topo_obj)
 for collection in topo_obj.users_collection:
@@ -210,29 +217,26 @@ for collection in srf_b.users_collection:
 
 
 
-###
-
-
-
-#
-
-
 
 # PERFORM THE CUTTING. KEEP THE SURFACES IN THEIR COLLECETION
 
-###
-###
-###
 
-#
+# SORT THE SURFACES.
+# Note: Blender sorts them by alphabetical order by default. Hence, we just add prefixes.
+collection = bpy.data.collections.get(srf_coll_name)
+srf_b.name = "0_" + srf_b.name
+    
 
 
 
-#m1, m2, org_mesh, org_surface = BlenderUtils.split_with_surface(mesh_name="Main", surface_name="Topo", keep_original_mesh=True, keep_original_surface=True)
+m1, m2, org_mesh, org_surface = BlenderUtils.split_with_surface(mesh_name="Main", surface_name="Topo", keep_original_mesh=True, keep_original_surface=True)
+
+
+
 
 # Save file and load the project
 fp = parent_path+"/project_data/script_output_4x3.ifc"
 model.write(fp)
 
 proj = bpy.ops.bim.load_project(filepath=fp, use_relative_path=False, should_start_fresh_session=False)
-
+print("Done.")

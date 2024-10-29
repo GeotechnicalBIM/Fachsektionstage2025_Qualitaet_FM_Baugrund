@@ -1,5 +1,94 @@
 import numpy as np
 from scipy.interpolate import RBFInterpolator, griddata
+import mathutils
+import math
+
+def create_fake_topography(xmin, xmax, ymin, ymax, grid_size=1, x_scale=0.1, y_scale=0.1, z_scale = 10):
+    # Calculate the number of vertices in the x and y directions
+    x_size = xmax - xmin
+    y_size = ymax - ymin
+    x_verts = int(x_size / grid_size) + 1
+    y_verts = int(y_size / grid_size) + 1
+
+    vertices, faces = [], []
+    for y in range(y_verts):
+        for x in range(x_verts):
+            # Calculate the vertex position in 3D space
+            x_coord = x * grid_size
+            y_coord = y * grid_size
+            # Generate height using Perlin noise or fractal noise
+            height = mathutils.noise.noise(mathutils.Vector((x_coord * x_scale, y_coord * y_scale, 1))) * z_scale
+            # Create the vertex and add it to the row list
+            vertices.append([x_coord, y_coord, height])
+    
+    for y in range(y_verts - 1):
+        for x in range(x_verts - 1):
+            # Calculate indices of the four vertices that make up each face
+            v1 = y * x_verts + x
+            v2 = y * x_verts + (x + 1)
+            v3 = (y + 1) * x_verts + (x + 1)
+            v4 = (y + 1) * x_verts + x
+            faces.append([v1, v2, v3, v4])
+
+    return vertices, faces
+
+def create_topography_with_influence(xmin, xmax, ymin, ymax, grid_size, z_base, points, influence_radius = 10, z_scale=1):
+    # Calculate the number of vertices in the x and y directions
+    x_size = xmax - xmin
+    y_size = ymax - ymin
+    x_verts = int(x_size / grid_size) + 1
+    y_verts = int(y_size / grid_size) + 1
+
+    vertices = []  # List to store 2D vertex positions with heights
+    faces = []     # List to store face indices
+
+    # Create a heightmap with Perlin noise
+    heightmap = {}
+    for y in range(y_verts):
+        for x in range(x_verts):
+            x_coord = x * grid_size
+            y_coord = y * grid_size
+            # Generate base height using Perlin noise
+            height = mathutils.noise.noise(mathutils.Vector((x_coord * 0.1, y_coord * 0.1, z_base))) * z_scale  # Adjust scaling and amplitude
+            heightmap[(x, y)] = height
+
+    # Smoothly interpolate heights to go through control points
+    for px, py, p_height in points:
+        # Convert world coordinates to grid indices
+        gx = int(px / grid_size)
+        gy = int(py / grid_size)
+
+        # Apply a radial influence from each control point
+         # Radius around the control point to influence, adjust as needed
+        for y in range(max(gy - influence_radius, 0), min(gy + influence_radius, y_verts - 1)):
+            for x in range(max(gx - influence_radius, 0), min(gx + influence_radius, x_verts - 1)):
+                # Distance from the control point
+                distance = math.sqrt((gx - x) ** 2 + (gy - y) ** 2)
+                if distance < influence_radius:
+                    # Smooth interpolation using inverse distance weighting
+                    weight = (1 - (distance / influence_radius)) ** 2
+                    # Blend noise height and target height smoothly
+                    heightmap[(x, y)] = (1 - weight) * heightmap[(x, y)] + weight * p_height
+
+    # Generate vertices with the adjusted heights
+    for y in range(y_verts):
+        for x in range(x_verts):
+            x_coord = x * grid_size
+            y_coord = y * grid_size
+            height = heightmap[(x, y)]
+            vertices.append((x_coord, y_coord, height))
+
+    # Generate faces based on vertex indices
+    for y in range(y_verts - 1):
+        for x in range(x_verts - 1):
+            # Calculate indices of the four vertices that make up each face
+            v1 = y * x_verts + x
+            v2 = y * x_verts + (x + 1)
+            v3 = (y + 1) * x_verts + (x + 1)
+            v4 = (y + 1) * x_verts + x
+            faces.append([v1, v2, v3, v4])
+
+    return vertices, faces
 
 def create_cuboid(xmin, ymin, zmin, xmax, ymax, zmax):
     """
