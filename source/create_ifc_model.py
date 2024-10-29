@@ -145,6 +145,17 @@ for k, v in mapping_hg_to_materialname.items():
 # CREATE THE SUBSOIL VOLUMES
 # USING THE STACKED SURFACE APPROACH
 
+# Create a collections for structuring the model / surface
+main_coll_name = "GeologicalModelling"
+srf_coll_name, base_coll_name, topo_coll_name = "GeologicalSurfaces", "Base", "Topography"
+
+main_coll = bpy.data.collections.new(main_coll_name)
+bpy.context.scene.collection.children.link(main_coll)
+srf_collection = bpy.data.collections.new(srf_coll_name)
+srf_collection = bpy.data.collections.new(base_coll_name)
+srf_collection = bpy.data.collections.new(topo_coll_name)
+for i in [srf_coll_name, base_coll_name, topo_coll_name]:
+    bpy.data.collections[main_coll_name].children.link(bpy.data.collections[i])
 
 # Create the meshes for soil volumes
 # Set model extents.
@@ -154,8 +165,11 @@ z_min, z_max = min([i["OK"] - i["Layerdata"]["UKs"][-1] for i in bh_data]) - 1, 
 
 # create base model
 base_v, base_f = create_cuboid(x_min+1, y_min+1, z_min-1, x_max-2, y_max-2, z_max+2) # reduce size so intersection is granted
-_, cuboid_mesh = BlenderUtils.add_testmesh(base_v, base_f, name="Main")
-
+base_obj, cuboid_mesh = BlenderUtils.add_testmesh(base_v, base_f, name="Main")
+bpy.data.collections[base_coll_name].objects.link(base_obj)
+for collection in base_obj.users_collection:
+    if collection.name!=base_coll_name:
+        collection.objects.unlink(base_obj)
 
 # Topography
 x_data = [i["x"] for i in bh_data]
@@ -164,28 +178,33 @@ z_data = [i["OK"] for i in bh_data]
 xyz_data = list(zip(x_data, y_data, z_data))
 x_rbf, y_rbf, z_rbf = interpolate_rbf(xyz_data, xmin = x_min, ymin = y_min, xmax = x_max, ymax = y_max)
 vertices, faces = prepare_grid_to_mesh(x_rbf, y_rbf, z_rbf)             
-_, topo_mesh = BlenderUtils.add_testmesh(vertices, faces, name="Topo")
+topo_obj, topo_mesh = BlenderUtils.add_testmesh(vertices, faces, name="Topo")
+bpy.data.collections[topo_coll_name].objects.link(topo_obj)
+for collection in topo_obj.users_collection:
+    if collection.name!=topo_coll_name:
+        collection.objects.unlink(topo_obj)  
 
 # Contact points from Fill to all other points.
 x_data, y_data, z_data = prepare_points_from_connections(bh_data, "A", ["S", "G"])    
 xyz_data = list(zip(x_data, y_data, z_data))
 x_rbf, y_rbf, z_rbf = interpolate_rbf(xyz_data, xmin = x_min, ymin = y_min, xmax = x_max, ymax = y_max)
 vertices, faces = prepare_grid_to_mesh(x_rbf, y_rbf, z_rbf)             
-BlenderUtils.add_testmesh(vertices, faces)
+srf_a, msh_a = BlenderUtils.add_testmesh(vertices, faces, "A_GS")
+bpy.data.collections[srf_coll_name].objects.link(srf_a)
+for collection in srf_a.users_collection:
+    if collection.name!=srf_coll_name:
+        collection.objects.unlink(srf_a)  
 
 # Contact points from S to G.
 x_data, y_data, z_data = prepare_points_from_connections(bh_data, "G", ["S"])    
 xyz_data = list(zip(x_data, y_data, z_data))
 x_rbf, y_rbf, z_rbf = interpolate_rbf(xyz_data, xmin = x_min, ymin = y_min, xmax = x_max, ymax = y_max)
 vertices, faces = prepare_grid_to_mesh(x_rbf, y_rbf, z_rbf)             
-BlenderUtils.add_testmesh(vertices, faces)
-    
-
-# Create a collection for all the surfaces, that will be used for cutting
-# Sort them in the cutting order.
-
-###
-
+srf_b, msh_b = BlenderUtils.add_testmesh(vertices, faces, name="G_S")
+bpy.data.collections[srf_coll_name].objects.link(srf_b)
+for collection in srf_b.users_collection:
+    if collection.name!=srf_coll_name:
+        collection.objects.unlink(srf_b)  
 
 
 
@@ -209,7 +228,7 @@ BlenderUtils.add_testmesh(vertices, faces)
 
 
 
-m1, m2, org_mesh, org_surface = BlenderUtils.split_with_surface(mesh_name="Main", surface_name="Topo", keep_original_mesh=True, keep_original_surface=True)
+#m1, m2, org_mesh, org_surface = BlenderUtils.split_with_surface(mesh_name="Main", surface_name="Topo", keep_original_mesh=True, keep_original_surface=True)
 
 # Save file and load the project
 fp = parent_path+"/project_data/script_output_4x3.ifc"
