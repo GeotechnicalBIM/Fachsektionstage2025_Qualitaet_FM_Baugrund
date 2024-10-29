@@ -61,12 +61,13 @@ body = run("context.add_context", model, context_type="Model",
 # Create a site, building, and storey. 
 site = run("root.create_entity", model, ifc_class="IfcSite", name="Baustelle_Fachsektionstage")
 building = run("root.create_entity", model, ifc_class="IfcBuilding", name="Bauwerk1")
-storey = run("root.create_entity", model, ifc_class="IfcBuildingStorey", name="Ebene0")
+storey = run("root.create_entity", model, ifc_class="IfcBuildingStorey", name="Aufschlussebene")
+storey2 = run("root.create_entity", model, ifc_class="IfcBuildingStorey", name="Schichtenebene")
 
 # Assign according to IFC structure
 run("aggregate.assign_object", file=model, products=[site], relating_object=project)
 run("aggregate.assign_object", file=model, products=[building], relating_object=site)
-run("aggregate.assign_object", file=model, products = [storey], relating_object=building)
+run("aggregate.assign_object", file=model, products = [storey, storey2], relating_object=building)
 
 for i in ["Auffuellung", "Kies", "Sand"]:
     material = ifcopenshell.api.run("material.add_material", model, name=i)
@@ -138,6 +139,9 @@ for k, v in mapping_hg_to_materialname.items():
             element_collector.append(layer_elems[object_ind])
     material = [i for i in model.by_type('IfcMaterial') if i.Name == v][0]   
     ifcopenshell.api.material.assign_material(model, products=element_collector, material=material)    
+
+
+
 
 
 
@@ -224,11 +228,7 @@ for collection in srf_b.users_collection:
 
 
 
-
-
-
 # PERFORM THE CUTTING. KEEP THE SURFACES IN THEIR COLLECETION
-
 
 # SORT THE SURFACES. Note: They are passed in an ordered list later on. This is just for visualtization 
 # Note: Blender sorts them by alphabetical order by default. Hence, we just add prefixes.
@@ -236,7 +236,7 @@ collection = bpy.data.collections.get(srf_coll_name)
 srf_b.name = "0_" + srf_b.name
     
 
-# Cut with surface
+# START WITH THE TOPOLOGY. The part above the topology is dropped.
 m1, m2, org_mesh, org_surface = BlenderUtils.split_with_surface(mesh_name="Main", surface_name="Topo", keep_original_mesh=True, keep_original_surface=True)
 
 # Sort the results of the intersection in the corresponding collections
@@ -310,6 +310,46 @@ layernames = ["A", "G", "S"]
 for name_ind, name in enumerate(names):
     obj = bpy.data.collections[vol_coll_name].objects[name]
     obj.name = layernames[name_ind]
+
+
+# ADD SOIL LAYERS TO IFC FILE
+
+for obj in bpy.data.collections[vol_coll_name].objects:
+    # Create entities
+    vol_element = run("root.create_entity", model, ifc_class="IfcGeotechnicalStratum", name=obj.name)
+    # Create their geometries based on the meshes
+    # Assign representations
+    # Assign material (Materials with styles have already been created for the boreholes)
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bm.faces.ensure_lookup_table()
+    bm.verts.ensure_lookup_table()
+    vertices, faces = [], []
+    for f in bm.faces:
+        faces.append([v.index for v in f.verts])
+    for v in bm.verts:
+        vertices.append(v.co.to_tuple())
+    vertices = [vertices]
+    faces = [faces]
+    bm.free()
+    #vertices = [[(0.,0.,0.), (0.,2.,0.), (2.,2.,0.), (2.,0.,0.), (1.,1.,1.)]]
+    #faces = [[(0,1,2,3), (0,4,1), (1,4,2), (2,4,3), (3,4,0)]]
+    representation = ifcopenshell.api.geometry.add_mesh_representation(model, context=body, vertices=vertices, faces=faces)
+    
+    ifcopenshell.api.geometry.assign_representation(model, product=vol_element, representation=representation)
+    run("aggregate.assign_object", model, products=[vol_element], relating_object=storey2)
+    run("spatial.assign_container", file=model, products = [vol_element], relating_structure=storey2)
+
+    # Assign materials by Hauptgruppe. Note: Hauptgruppen have been mapped to material names prior      
+
+    for k, v in mapping_hg_to_materialname.items():
+        element_collector = []
+
+        if obj.name == k:
+            element_collector.append(vol_element)
+            material = [i for i in model.by_type('IfcMaterial') if i.Name == v][0]   
+            ifcopenshell.api.material.assign_material(model, products=element_collector, material=material)    
+            break
 
 
 # Save file and load the project
