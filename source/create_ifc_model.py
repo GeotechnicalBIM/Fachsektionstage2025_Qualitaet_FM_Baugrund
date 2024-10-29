@@ -1,4 +1,5 @@
 import bpy
+import bmesh
 import json
 import ifcopenshell
 from ifcopenshell.api import run
@@ -229,14 +230,11 @@ for collection in srf_b.users_collection:
 # PERFORM THE CUTTING. KEEP THE SURFACES IN THEIR COLLECETION
 
 
-# SORT THE SURFACES.
+# SORT THE SURFACES. Note: They are passed in an ordered list later on. This is just for visualtization 
 # Note: Blender sorts them by alphabetical order by default. Hence, we just add prefixes.
 collection = bpy.data.collections.get(srf_coll_name)
 srf_b.name = "0_" + srf_b.name
     
-
-
-
 
 # Cut with surface
 m1, m2, org_mesh, org_surface = BlenderUtils.split_with_surface(mesh_name="Main", surface_name="Topo", keep_original_mesh=True, keep_original_surface=True)
@@ -262,8 +260,8 @@ for collection in org_mesh.users_collection:
 # Hide the main body
 org_mesh.hide_viewport = True
 
-# Cut all volume meshes with the next surfaces
-#for srf in [srf_a, srf_b]:
+# Cut all volume meshes with the next surfaces. THIS HAS THE BE A CLEAN CUT THROUGH!!
+
 
 for srf in [srf_b, srf_a]:
     for mesh in bpy.data.collections[vol_coll_name].all_objects:
@@ -293,7 +291,25 @@ for srf in [srf_b, srf_a]:
     
 
 bpy.data.collections[topo_coll_name].hide_viewport = True  
+bpy.data.collections[srf_coll_name].hide_viewport = True  
 
+
+# Lazy identification of subsoil volumes as we know the order to be A-G-S.
+z_max_collector = []
+for m in bpy.data.collections[vol_coll_name].objects:
+    bm = bmesh.new()
+    bm.from_mesh(m.data)
+    zmax = max([i.co.z for i in bm.verts])
+    z_max_collector.append(zmax)
+    bm.free()
+
+names = [i.name for i in bpy.data.collections[vol_coll_name].objects]
+names = [x for _, x in sorted(zip(z_max_collector, names), key=lambda x: x[0], reverse=True)]
+
+layernames = ["A", "G", "S"]
+for name_ind, name in enumerate(names):
+    obj = bpy.data.collections[vol_coll_name].objects[name]
+    obj.name = layernames[name_ind]
 
 
 # Save file and load the project

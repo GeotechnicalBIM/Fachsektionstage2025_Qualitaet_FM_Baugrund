@@ -2,11 +2,13 @@ import bpy
 import bmesh
 import math
 from mathutils.bvhtree import BVHTree
+from mathutils.geometry import intersect_ray_tri
 
 class BlenderUtils:
     def __init__(self) -> None:
         pass
 
+    
     @staticmethod
     def intersection_check(obj_name_list, scene=bpy.context.scene):
         #check every object for intersection with every other object
