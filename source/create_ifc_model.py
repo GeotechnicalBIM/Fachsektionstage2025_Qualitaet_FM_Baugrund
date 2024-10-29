@@ -147,14 +147,15 @@ for k, v in mapping_hg_to_materialname.items():
 
 # Create a collections for structuring the model / surface
 main_coll_name = "GeologicalModelling"
-srf_coll_name, base_coll_name, topo_coll_name = "GeologicalSurfaces", "Base", "Topography"
+srf_coll_name, base_coll_name, topo_coll_name, vol_coll_name = "GeologicalSurfaces", "Base", "Topography", "GeologicalVolumes"
 
 main_coll = bpy.data.collections.new(main_coll_name)
 bpy.context.scene.collection.children.link(main_coll)
 srf_collection = bpy.data.collections.new(srf_coll_name)
-srf_collection = bpy.data.collections.new(base_coll_name)
-srf_collection = bpy.data.collections.new(topo_coll_name)
-for i in [srf_coll_name, base_coll_name, topo_coll_name]:
+base_collection = bpy.data.collections.new(base_coll_name)
+topo_collection = bpy.data.collections.new(topo_coll_name)
+vol_collection = bpy.data.collections.new(vol_coll_name)
+for i in [srf_coll_name, base_coll_name, topo_coll_name, vol_coll_name]:
     bpy.data.collections[main_coll_name].children.link(bpy.data.collections[i])
 
 # Create the meshes for soil volumes
@@ -180,7 +181,9 @@ x_rbf, y_rbf, z_rbf = interpolate_rbf(xyz_data, xmin = x_min, ymin = y_min, xmax
 vertices, faces = prepare_grid_to_mesh(x_rbf, y_rbf, z_rbf)             
 
 for v_ind, v in enumerate(vertices): # this would be much prettier with perlin noise or something like that
-    if v[2]<min(z_data):
+    if min(BlenderUtils.compute_xy_distances(v, xyz_data)) < 0.1: # keep the points from the boreholes.
+        continue
+    elif v[2]<min(z_data):
         vertices[v_ind] = [v[0], v[1], min(z_data) + 0.1* random.random()]
     else:
         vertices[v_ind] = [v[0], v[1], v[2] + 0.1* random.random() - 0.1*random.random()]
@@ -205,6 +208,11 @@ for collection in srf_a.users_collection:
 # Contact points from S to G.
 x_data, y_data, z_data = prepare_points_from_connections(bh_data, "G", ["S"])    
 xyz_data = list(zip(x_data, y_data, z_data))
+
+#ADD CUSTOM CONSTRAINTS
+xyz_data.append((0,100, 3))
+
+
 x_rbf, y_rbf, z_rbf = interpolate_rbf(xyz_data, xmin = x_min, ymin = y_min, xmax = x_max, ymax = y_max)
 vertices, faces = prepare_grid_to_mesh(x_rbf, y_rbf, z_rbf)             
 srf_b, msh_b = BlenderUtils.add_testmesh(vertices, faces, name="G_S")
@@ -229,8 +237,62 @@ srf_b.name = "0_" + srf_b.name
 
 
 
+
+# Cut with surface
 m1, m2, org_mesh, org_surface = BlenderUtils.split_with_surface(mesh_name="Main", surface_name="Topo", keep_original_mesh=True, keep_original_surface=True)
 
+# Sort the results of the intersection in the corresponding collections
+bpy.data.collections[vol_coll_name].objects.link(m1)
+for collection in m1.users_collection:
+    if collection.name!=vol_coll_name:
+        collection.objects.unlink(m1)  
+
+bpy.data.objects.remove(m2, do_unlink=True)
+
+bpy.data.collections[topo_coll_name].objects.link(org_surface)
+for collection in org_surface.users_collection:
+    if collection.name!=topo_coll_name:
+        collection.objects.unlink(org_surface)  
+
+bpy.data.collections[base_coll_name].objects.link(org_mesh)
+for collection in org_mesh.users_collection:
+    if collection.name!=base_coll_name:
+        collection.objects.unlink(org_mesh)
+
+# Hide the main body
+org_mesh.hide_viewport = True
+
+# Cut all volume meshes with the next surfaces
+#for srf in [srf_a, srf_b]:
+
+for srf in [srf_b, srf_a]:
+    for mesh in bpy.data.collections[vol_coll_name].all_objects:
+        if not BlenderUtils.intersection_check([mesh.name, srf.name]):
+            continue
+
+        m1, m2, org_mesh, org_surface = BlenderUtils.split_with_surface(mesh_name=mesh.name, surface_name=srf.name, keep_original_mesh=False, keep_original_surface=True)
+
+
+        if m1.name not in [i.name for i in bpy.data.collections[vol_coll_name].objects]:
+            bpy.data.collections[vol_coll_name].objects.link(m1)
+            for collection in m1.users_collection:
+                if collection.name!=vol_coll_name:
+                    collection.objects.unlink(m1)
+            
+        if m2.name not in [i.name for i in bpy.data.collections[vol_coll_name].objects]:        
+            bpy.data.collections[vol_coll_name].objects.link(m2)
+            for collection in m1.users_collection:
+                if collection.name!=vol_coll_name:
+                    collection.objects.unlink(m2)  
+
+        if org_surface.name not in [i.name for i in bpy.data.collections[srf_coll_name].objects]:     
+            bpy.data.collections[srf_coll_name].objects.link(org_surface)
+            for collection in org_surface.users_collection:
+                if collection.name!=srf_coll_name:
+                    collection.objects.unlink(org_surface)  
+    
+
+bpy.data.collections[topo_coll_name].hide_viewport = True  
 
 
 
