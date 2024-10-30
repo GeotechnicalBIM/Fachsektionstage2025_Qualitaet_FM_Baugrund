@@ -8,6 +8,7 @@ import sys
 import os
 import numpy as np
 import random
+import ifcopenshell.api.pset_template
 
 # local imports. looks a bit weird, but as the code is executed in blender we have to add the paths manually
 
@@ -45,13 +46,16 @@ for i in bpy.data.collections:
 
 
 # Create a blank model
-model = ifcopenshell.file(schema="IFC4x3")
+model = ifcopenshell.file(schema="IFC4X3")
 
 # All projects must have one IFC Project element
 project = run("root.create_entity", model, ifc_class="IfcProject", name="Projekt_Fachsektionstage2025")
+project.Description = "Ein akademisches Projekt, das Teil des Beitrags von Johannes Beck zu den Fachsektionstagen Geotechnik 2025 in Würzburg ist"
 
 # Assigning without arguments defaults to metric units
-run("unit.assign_unit", model)
+length_unit = ifcopenshell.api.unit.add_si_unit(model, unit_type="LENGTHUNIT") # Note: Default is mm 
+area_unit = ifcopenshell.api.unit.add_si_unit(model, unit_type="AREAUNIT")
+run("unit.assign_unit", model, units=[length_unit, area_unit])
 
 # Create the 3D context - for body representations
 context_3D = run("context.add_context", model, context_type="Model")
@@ -61,13 +65,23 @@ body = run("context.add_context", model, context_type="Model",
 # Create a site, building, and storey. 
 site = run("root.create_entity", model, ifc_class="IfcSite", name="Baustelle_Fachsektionstage")
 building = run("root.create_entity", model, ifc_class="IfcBuilding", name="Bauwerk1")
-storey = run("root.create_entity", model, ifc_class="IfcBuildingStorey", name="Aufschlussebene")
-storey2 = run("root.create_entity", model, ifc_class="IfcBuildingStorey", name="Schichtenebene")
+#storey = run("root.create_entity", model, ifc_class="IfcBuildingStorey", name="Aufschlussebene")
+#storey2 = run("root.create_entity", model, ifc_class="IfcBuildingStorey", name="Schichtenebene")
+
 
 # Assign according to IFC structure
 run("aggregate.assign_object", file=model, products=[site], relating_object=project)
 run("aggregate.assign_object", file=model, products=[building], relating_object=site)
-run("aggregate.assign_object", file=model, products = [storey, storey2], relating_object=building)
+#run("aggregate.assign_object", file=model, products = [storey, storey2], relating_object=building)
+
+# Create Geomodel
+baugrundschichtenmodell = run("root.create_entity", model, ifc_class="IfcGeomodel", name="Baugrundschichtenmodell")
+baugrundaufschlussmodell = run("root.create_entity", model, ifc_class="IfcGeomodel", name="Baugrundaufschlussmodell")
+
+#run("aggregate.assign_object", file=model, products=[baugrundschichtenmodell, baugrundaufschlussmodell], relating_object=site)
+run("spatial.assign_container", file=model, products = [baugrundschichtenmodell, baugrundaufschlussmodell], relating_structure=site)
+
+
 
 for i in ["Auffuellung", "Kies", "Sand"]:
     material = ifcopenshell.api.run("material.add_material", model, name=i)
@@ -125,7 +139,8 @@ for bh_ind, bh_dict in enumerate(bh_data):
     run("aggregate.assign_object", model, products=bh_layer_sublist, relating_object=bh)
     ifc_subelements.append(bh_layer_sublist)        
 #run("aggregate.assign_object", file=model, products = ifc_bhs, relating_object=storey)
-run("spatial.assign_container", file=model, products = ifc_bhs, relating_structure=storey)
+#run("spatial.assign_container", file=model, products = ifc_bhs, relating_structure=storey)
+run("aggregate.assign_object", file=model, products = ifc_bhs, relating_object=baugrundaufschlussmodell)
         
 # Assign materials by Hauptgruppe. Note: Hauptgruppen have been mapped to material names prior      
 layer_elems = [i for j in ifc_subelements for i in j]
@@ -290,8 +305,10 @@ for srf in [srf_b, srf_a]:
                     collection.objects.unlink(org_surface)  
     
 
+# Hide the blender collections
 bpy.data.collections[topo_coll_name].hide_viewport = True  
 bpy.data.collections[srf_coll_name].hide_viewport = True  
+bpy.data.collections[vol_coll_name].hide_viewport = True  
 
 
 # Lazy identification of subsoil volumes as we know the order to be A-G-S.
@@ -313,10 +330,10 @@ for name_ind, name in enumerate(names):
 
 
 # ADD SOIL LAYERS TO IFC FILE
-
+ifc_volumes = []
 for obj in bpy.data.collections[vol_coll_name].objects:
     # Create entities
-    vol_element = run("root.create_entity", model, ifc_class="IfcGeotechnicalStratum", name=obj.name)
+    vol_element = run("root.create_entity", model, ifc_class="IfcGeotechnicalStratum", predefined_type="SOLID", name=obj.name)
     # Create their geometries based on the meshes
     # Assign representations
     # Assign material (Materials with styles have already been created for the boreholes)
@@ -337,8 +354,11 @@ for obj in bpy.data.collections[vol_coll_name].objects:
     representation = ifcopenshell.api.geometry.add_mesh_representation(model, context=body, vertices=vertices, faces=faces)
     
     ifcopenshell.api.geometry.assign_representation(model, product=vol_element, representation=representation)
-    run("aggregate.assign_object", model, products=[vol_element], relating_object=storey2)
-    run("spatial.assign_container", file=model, products = [vol_element], relating_structure=storey2)
+    run("aggregate.assign_object", model, products=[vol_element], relating_object=baugrundschichtenmodell)
+    #run("spatial.assign_container", file=model, products = [vol_element], relating_structure=site)
+    
+    #run("spatial.assign_container", file=model, products = [vol_element], relating_structure=storey2)
+
 
     # Assign materials by Hauptgruppe. Note: Hauptgruppen have been mapped to material names prior      
 
@@ -350,6 +370,41 @@ for obj in bpy.data.collections[vol_coll_name].objects:
             material = [i for i in model.by_type('IfcMaterial') if i.Name == v][0]   
             ifcopenshell.api.material.assign_material(model, products=element_collector, material=material)    
             break
+
+    ifc_volumes.append(vol_element)
+
+
+# Set attributes
+for i in ifc_volumes:
+    i.Description = "A volume representing a subsoil layer."
+
+
+# Assign properties to the elements in ifc_bhs and ifc_volumnes
+
+# Add a Pset for which a standard template is provided. See: https://ifc43-docs.standards.buildingsmart.org/IFC/RELEASE/IFC4x3/HTML/lexical/Pset_SolidStratumCapacity.htm
+# Other ones are e.g. https://ifc43-docs.standards.buildingsmart.org/IFC/RELEASE/IFC4x3/HTML/lexical/Pset_SolidStratumComposition.htm
+p = [i for i in ifc_volumes if i.Name=="S"][0]
+Pset_SolidStratumCapacity = ifcopenshell.api.pset.add_pset(model, product=p, name="Pset_SolidStratumCapacity")
+ifcopenshell.api.pset.edit_pset(model, pset=Pset_SolidStratumCapacity, properties={"CohesionBehaviour": 0, "FrictionAngle": 32.5, "PoisonsRatio":None}, should_purge=False)
+
+p = [i for i in ifc_volumes if i.Name=="A"][0]
+Pset_SolidStratumCapacity = ifcopenshell.api.pset.add_pset(model, product=p, name="Pset_SolidStratumCapacity")
+ifcopenshell.api.pset.edit_pset(model, pset=Pset_SolidStratumCapacity, properties={"CohesionBehaviour": 5, "FrictionAngle": 15, "PoisonsRatio":0.2}, should_purge=False)
+
+p = [i for i in ifc_volumes if i.Name=="G"][0]
+Pset_SolidStratumCapacity = ifcopenshell.api.pset.add_pset(model, product=p, name="Pset_SolidStratumCapacity")
+ifcopenshell.api.pset.edit_pset(model, pset=Pset_SolidStratumCapacity, properties={"CohesionBehaviour": 0, "FrictionAngle": 40, "PoisonsRatio":0.2}, should_purge=False)
+
+
+template = ifcopenshell.api.pset_template.add_pset_template(model, name="Fachsektionstage2025_template")
+# Let's imagine we want all model authors to specify two properties,
+# one being a length measurement and another being a boolean.
+prop1 = ifcopenshell.api.pset_template.add_prop_template(model, pset_template=template, name="DemoA", primary_measure_type="IfcLengthMeasure")
+prop2 = ifcopenshell.api.pset_template.add_prop_template(model, pset_template=template, name="IsFun", primary_measure_type="IfcBoolean")
+
+for p in ifc_volumes:
+    pset = ifcopenshell.api.pset.add_pset(model, product=p, name="Fachsektionstage2025")
+    ifcopenshell.api.pset.edit_pset(model, pset=pset, properties={"DemoA": 42.0, "IsFun": True}, pset_template=template)
 
 
 # Save file and load the project
