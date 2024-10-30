@@ -55,7 +55,9 @@ project.Description = "Ein akademisches Projekt, das Teil des Beitrags von Johan
 # Assigning without arguments defaults to metric units
 length_unit = ifcopenshell.api.unit.add_si_unit(model, unit_type="LENGTHUNIT") # Note: Default is mm 
 area_unit = ifcopenshell.api.unit.add_si_unit(model, unit_type="AREAUNIT")
-run("unit.assign_unit", model, units=[length_unit, area_unit])
+money_unit = ifcopenshell.api.unit.add_monetary_unit(model, currency="EUR")
+mass_unit =  ifcopenshell.api.unit.add_si_unit(model, unit_type="MASSUNIT")
+run("unit.assign_unit", model, units=[length_unit, area_unit, money_unit])
 
 # Create the 3D context - for body representations
 context_3D = run("context.add_context", model, context_type="Model")
@@ -101,7 +103,7 @@ for i in ["Auffuellung", "Kies", "Sand"]:
     ifcopenshell.api.run("style.assign_material_style", model, material=material, style=style, context=context_3D)
 
 # Create the profile used to construct boreholes
-profile = model.create_entity("IfcCircleProfileDef", ProfileName="300C", ProfileType="AREA",Radius=300)
+profile = model.create_entity("IfcCircleProfileDef", ProfileName="300C", ProfileType="AREA",Radius=0.300) # Note: Watch the choses IFCLENGHTUNIT
 
 
 # Create the boreholes from the dict containing the data
@@ -396,15 +398,20 @@ Pset_SolidStratumCapacity = ifcopenshell.api.pset.add_pset(model, product=p, nam
 ifcopenshell.api.pset.edit_pset(model, pset=Pset_SolidStratumCapacity, properties={"CohesionBehaviour": 0, "FrictionAngle": 40, "PoisonsRatio":0.2}, should_purge=False)
 
 
-template = ifcopenshell.api.pset_template.add_pset_template(model, name="Fachsektionstage2025_template")
-# Let's imagine we want all model authors to specify two properties,
-# one being a length measurement and another being a boolean.
-prop1 = ifcopenshell.api.pset_template.add_prop_template(model, pset_template=template, name="DemoA", primary_measure_type="IfcLengthMeasure")
-prop2 = ifcopenshell.api.pset_template.add_prop_template(model, pset_template=template, name="IsFun", primary_measure_type="IfcBoolean")
+for bh in ifc_bhs:
+    Pset_BoreholeCommon = ifcopenshell.api.pset.add_pset(model, product=bh, name="Pset_BoreholeCommon")
+    ifcopenshell.api.pset.edit_pset(model, pset=Pset_BoreholeCommon, properties={"BoreholeState": "INSTALLED", "GroundwaterDepth":None}, should_purge=False)
 
+
+# Add custom properties using a custom property template
+template = ifcopenshell.api.pset_template.add_pset_template(model, name="Fachsektionstage2025_template")
+prop1 = ifcopenshell.api.pset_template.add_prop_template(model, pset_template=template, name="Wichte", description="Feuchtwichte des Bodens", template_type="P_SINGLEVALUE", primary_measure_type="IfcMassDensityMeasure") #kg/m3
+prop1 = ifcopenshell.api.pset_template.add_prop_template(model, pset_template=template, name="WichteBounded", description="Feuchtwichte des Bodens", template_type="P_BOUNDEDVALUE", primary_measure_type="IfcMassDensityMeasure") #kg/m3
+
+print(dir(prop1))
 for p in ifc_volumes:
     pset = ifcopenshell.api.pset.add_pset(model, product=p, name="Fachsektionstage2025")
-    ifcopenshell.api.pset.edit_pset(model, pset=pset, properties={"DemoA": 42.0, "IsFun": True}, pset_template=template)
+    ifcopenshell.api.pset.edit_pset(model, pset=pset, properties={"Wichte": 19_000, "IsFun": True}, pset_template=template)
 
 
 # Save file and load the project
