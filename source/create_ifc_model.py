@@ -395,7 +395,7 @@ ifcopenshell.api.pset.edit_pset(model, pset=Pset_SolidStratumCapacity, propertie
 
 p = [i for i in ifc_volumes if i.Name=="G"][0]
 Pset_SolidStratumCapacity = ifcopenshell.api.pset.add_pset(model, product=p, name="Pset_SolidStratumCapacity")
-ifcopenshell.api.pset.edit_pset(model, pset=Pset_SolidStratumCapacity, properties={"CohesionBehaviour": 0, "FrictionAngle": 40, "PoisonsRatio":0.2}, should_purge=False)
+ifcopenshell.api.pset.edit_pset(model, pset=Pset_SolidStratumCapacity, properties={"CohesionBehaviour": 10_000, "FrictionAngle": 40, "PoisonsRatio":0.2}, should_purge=False)
 
 
 for bh in ifc_bhs:
