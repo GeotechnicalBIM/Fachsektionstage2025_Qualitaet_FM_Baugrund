@@ -1,0 +1,27 @@
+</ids:specification>
+<ids:specification ifcVersion="IFC4X3_ADD2" name="Modellaufbau_Borehole_GeotechnicalStratum" description="Ein IfcBorehole dient als Container für verschiedene IfcGeotechnicalStratum. IfcBorehole beschreibt die Bohrung als ganzes, wohin IfcGeotechnicalStratum zur Repräsentation von Ansprachebereichen verwendet wird." instructions="Der Modellaufbau ist durch den Fachplaner für Geotechnik sicherzustellen.">
+    <ids:applicability minOccurs="0" maxOccurs="unbounded">
+    <ids:entity>
+        <ids:name>
+        <ids:simpleValue>IFCGEOTECHNICALSTRATUM</ids:simpleValue>
+        </ids:name>
+    </ids:entity>
+    <ids:attribute>
+        <ids:name>
+        <ids:simpleValue>ObjectType</ids:simpleValue>
+        </ids:name>
+        <ids:value>
+        <ids:simpleValue>ANSPRACHEBEREICH</ids:simpleValue>
+        </ids:value>
+    </ids:attribute>
+    </ids:applicability>
+    <ids:requirements>
+    <ids:partOf relation="IFCRELAGGREGATES" cardinality="required">
+        <ids:entity>
+        <ids:name>
+            <ids:simpleValue>IFCBOREHOLE</ids:simpleValue>
+        </ids:name>
+        </ids:entity>
+    </ids:partOf>
+    </ids:requirements>
+</ids:specification>

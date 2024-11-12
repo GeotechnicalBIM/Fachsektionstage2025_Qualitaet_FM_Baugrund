@@ -120,7 +120,8 @@ for bh_ind, bh_dict in enumerate(bh_data):
     for layer_ind in range(len(bh_dict["Layerdata"]["UKs"])):
         hg = bh_dict["Layerdata"]["Hauptgruppen"][layer_ind]
         uk = bh_dict["Layerdata"]["UKs"][layer_ind]
-        layerelement = run("root.create_entity", model, ifc_class="IfcGeotechnicalStratum", name="{0}_{1}".format(bh_dict["Name"], layer_ind))
+        # Note: The ifcopenshell.api.root.create entity handles the userdefined predefined type automatically
+        layerelement = run("root.create_entity", model, ifc_class="IfcGeotechnicalStratum", name="{0}_{1}".format(bh_dict["Name"], layer_ind), predefined_type="ANSPRACHEBEREICH")
         
         if layer_ind == 0:
             layer_thickness = uk
@@ -139,7 +140,11 @@ for bh_ind, bh_dict in enumerate(bh_data):
 
         bh_layer_sublist.append(layerelement)  
     run("aggregate.assign_object", model, products=bh_layer_sublist, relating_object=bh)
-    ifc_subelements.append(bh_layer_sublist)        
+    ifc_subelements.append(bh_layer_sublist)   
+
+
+print("!!!!!!!!!",layerelement.PredefinedType, dir(layerelement.PredefinedType))     
+
 #run("aggregate.assign_object", file=model, products = ifc_bhs, relating_object=storey)
 #run("spatial.assign_container", file=model, products = ifc_bhs, relating_structure=storey)
 run("aggregate.assign_object", file=model, products = ifc_bhs, relating_object=baugrundaufschlussmodell)
