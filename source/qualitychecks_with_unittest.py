@@ -3,6 +3,7 @@ import unittest
 from collections import Counter
 
 import os
+import re
 import ifcopenshell
 from ifcopenshell.api import run
 import ifcopenshell.util.element
@@ -52,6 +53,7 @@ class TestBoreholes(unittest.TestCase):
                 self.assertTrue(any((i.RelatingObject.is_a("IfcBorehole") and i.is_a("IfcRelAggregates")) for i in elem.Decomposes))
                 #print(elem.Name, any((i.RelatingObject.is_a("IfcBorehole") and i.is_a("IfcRelAggregates")) for i in elem.Decomposes))
     
+    
     def test_namingconvention_ifcborehole(self):
         """IV.	Die Namen der IfcBoreholes entsprechen folgender Namenskonvention: Die ersten drei stellen sind „bh_“ gefolgt von drei Ziffern."""
         elems = model.by_type("IfcBorehole")
@@ -78,7 +80,21 @@ class TestBoreholes(unittest.TestCase):
 
     def test_namingconvention_ansprachebereiche(self):
         """VI.	Die Namen der Ansprachebereiche entsprechen dem der zugehörigen IfcBoreholes, folgt von einem Unterstrich und drei Ziffern."""
-        pass
+        elems = model.by_type("IfcGeotechnicalStratum")
+        elems = [i for i in elems if i.ObjectType=="ANSPRACHEBEREICH"]
+        for elem in elems:
+            with self.subTest(elem=elem):
+                name = elem.Name
+                if not elem.Decomposes:
+                    self.assertIsNotNone(None, "No parent borehole found")
+                if not any((i.RelatingObject.is_a("IfcBorehole") and i.is_a("IfcRelAggregates")) for i in elem.Decomposes):
+                    self.assertIsNotNone(None, "No parent borehole found")
+                for i in elem.Decomposes:
+                    if (i.RelatingObject.is_a("IfcBorehole") and i.is_a("IfcRelAggregates")):
+                        bh_name = i.RelatingObject.Name
+                        self.assertRegex(elem.Name, fr'^{re.escape(bh_name)}_\d{{3}}$', "X"*100)
+    
+
 
     def test_distances_ifcboreholes(self):
         """VII. Die Abstände der Bohrungen entsprechen den Empfehlungen aus Eurocode 7."""

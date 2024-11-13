@@ -121,7 +121,16 @@ for bh_ind, bh_dict in enumerate(bh_data):
         hg = bh_dict["Layerdata"]["Hauptgruppen"][layer_ind]
         uk = bh_dict["Layerdata"]["UKs"][layer_ind]
         # Note: The ifcopenshell.api.root.create entity handles the userdefined predefined type automatically
-        layerelement = run("root.create_entity", model, ifc_class="IfcGeotechnicalStratum", name="{0}_{1}".format(bh_dict["Name"], layer_ind), predefined_type="ANSPRACHEBEREICH")
+        if layer_ind<10:
+            naming_helper = f"00{layer_ind}"
+        elif layer_ind<100:
+            naming_helper = f"0{layer_ind}"
+        elif layer_ind<1000:
+            naming_helper = f"{layer_ind}"
+        else:
+            raise ValueError("Your Borehole shall not have more than 1000 layer elements")
+        
+        layerelement = run("root.create_entity", model, ifc_class="IfcGeotechnicalStratum", name="{0}_{1}".format(bh_dict["Name"], naming_helper), predefined_type="ANSPRACHEBEREICH")
         
         if layer_ind == 0:
             layer_thickness = uk
