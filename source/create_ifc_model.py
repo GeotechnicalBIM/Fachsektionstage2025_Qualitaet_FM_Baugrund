@@ -143,8 +143,6 @@ for bh_ind, bh_dict in enumerate(bh_data):
     ifc_subelements.append(bh_layer_sublist)   
 
 
-print("!!!!!!!!!",layerelement.PredefinedType, dir(layerelement.PredefinedType))     
-
 #run("aggregate.assign_object", file=model, products = ifc_bhs, relating_object=storey)
 #run("spatial.assign_container", file=model, products = ifc_bhs, relating_structure=storey)
 run("aggregate.assign_object", file=model, products = ifc_bhs, relating_object=baugrundaufschlussmodell)
@@ -413,15 +411,24 @@ template = ifcopenshell.api.pset_template.add_pset_template(model, name="Fachsek
 prop1 = ifcopenshell.api.pset_template.add_prop_template(model, pset_template=template, name="Wichte", description="Feuchtwichte des Bodens", template_type="P_SINGLEVALUE", primary_measure_type="IfcMassDensityMeasure") #kg/m3
 prop1 = ifcopenshell.api.pset_template.add_prop_template(model, pset_template=template, name="WichteBounded", description="Feuchtwichte des Bodens", template_type="P_BOUNDEDVALUE", primary_measure_type="IfcMassDensityMeasure") #kg/m3
 
-print(dir(prop1))
 for p in ifc_volumes:
     pset = ifcopenshell.api.pset.add_pset(model, product=p, name="Fachsektionstage2025")
     ifcopenshell.api.pset.edit_pset(model, pset=pset, properties={"Wichte": 19_000, "IsFun": True}, pset_template=template)
 
-
 # Save file and load the project
 fp = parent_path+"/project_data/script_output_4x3.ifc"
 model.write(fp)
+
+# Add some issues for showing how the tests work
+incorrect_layerelement = run("root.create_entity", model, ifc_class="IfcGeotechnicalStratum", name="wrong_borehole_name_xy", predefined_type="KEIN_ANSPRACHEBEREICH")
+incorrect_layerelement2 = run("root.create_entity", model, ifc_class="IfcGeotechnicalStratum", name="wrong_borehole_name_xy", predefined_type="ANSPRACHEBEREICH")
+incorrect_borehole = run("root.create_entity", model, ifc_class="IfcBorehole", name="wrong_borehole_name")
+incorrect_borehole1 = run("root.create_entity", model, ifc_class="IfcBorehole", name="wrong_borehole_name")
+
+fp = parent_path+"/project_data/script_output_4x3_with_errors.ifc"
+model.write(fp)
+
+
 
 proj = bpy.ops.bim.load_project(filepath=fp, use_relative_path=False, should_start_fresh_session=False)
 print("Done.")
