@@ -222,6 +222,18 @@ for v_ind, v in enumerate(vertices): # this would be much prettier with perlin n
     else:
         vertices[v_ind] = [v[0], v[1], v[2] + 0.1* random.random() - 0.1*random.random()]
 
+
+#####################################################################
+# ADD TOPOGRAPHY TO IFC FILE
+topograhy = run("root.create_entity", model, ifc_class="IfcGeographicElement", predefined_type="TERRAIN", name="Topography")
+faces = [list(i) for i in faces]
+vertices = [[float(i[0]),float(i[1]),float(i[2])] for i in vertices] 
+representation = ifcopenshell.api.geometry.add_mesh_representation(model, context=body, vertices=[vertices], faces=[faces]) # Note: Other representations might be suited 
+ifcopenshell.api.geometry.assign_representation(model, product=topograhy, representation=representation)
+run("spatial.assign_container", file=model, products = [topograhy], relating_structure=site)
+
+#####################################################################
+
 topo_obj, topo_mesh = BlenderUtils.add_testmesh(vertices, faces, name="Topo")
 bpy.data.collections[topo_coll_name].objects.link(topo_obj)
 for collection in topo_obj.users_collection:
