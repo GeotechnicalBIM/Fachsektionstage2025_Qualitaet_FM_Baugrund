@@ -57,7 +57,15 @@ length_unit = ifcopenshell.api.unit.add_si_unit(model, unit_type="LENGTHUNIT") #
 area_unit = ifcopenshell.api.unit.add_si_unit(model, unit_type="AREAUNIT")
 money_unit = ifcopenshell.api.unit.add_monetary_unit(model, currency="EUR")
 mass_unit =  ifcopenshell.api.unit.add_si_unit(model, unit_type="MASSUNIT")
-run("unit.assign_unit", model, units=[length_unit, area_unit, money_unit])
+angle_unit = ifcopenshell.api.unit.add_si_unit(model, unit_type="PLANEANGLEUNIT",) #RADIAN
+
+# Angles in degrees instead of radians.
+val = model.create_entity("IFCPLANEANGLEMEASURE", 1.74532925199433E-2)
+measure_unit = model.create_entity("IFCMEASUREWITHUNIT", UnitComponent=angle_unit, ValueComponent=val)
+dim_exp = model.create_entity("IFCDIMENSIONALEXPONENTS", 0,0,0,0,0,0,0)
+angle_unit_degrees = model.create_entity("IFCCONVERSIONBASEDUNIT", ConversionFactor=measure_unit, Name="DEGREE", UnitType="PLANEANGLEUNIT", Dimensions=dim_exp)
+
+run("unit.assign_unit", model, units=[length_unit, area_unit, money_unit, angle_unit_degrees])
 
 # Create the 3D context - for body representations
 context_3D = run("context.add_context", model, context_type="Model")

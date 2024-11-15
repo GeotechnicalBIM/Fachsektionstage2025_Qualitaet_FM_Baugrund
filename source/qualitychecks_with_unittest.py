@@ -88,7 +88,6 @@ class TestBoreholes(unittest.TestCase):
         elems = [i for i in elems if i.ObjectType=="ANSPRACHEBEREICH"]
         for elem in elems:
             with self.subTest(elem=elem):
-                name = elem.Name
                 if not elem.Decomposes:
                     self.assertIsNotNone(None, "No parent borehole found")
                 if not any((i.RelatingObject.is_a("IfcBorehole") and i.is_a("IfcRelAggregates")) for i in elem.Decomposes):
@@ -101,12 +100,71 @@ class TestBoreholes(unittest.TestCase):
 
 
     def test_distances_ifcboreholes(self):
-        """VII. Die Abstände der Bohrungen entsprechen den Empfehlungen aus Eurocode 7."""
-        pass
+        """VII.	Die Abstände der Bohrungen (Bohrraster) entsprechen den Empfehlungen aus DIN EN 1997-2 Anlage B3."""
+        # Hoch und Industriebauten: Rasterabstand 15-40 m
+        # großflächige Bauwerke: Rasterabstand nicht mehr als 60 m
+        # Linienbauwerke: Abstand zwischen 20 m und 200 m
+        # Sonderbauwerke: zwei bis sechs Aufschlüsse je Fundament
+        # Staudämme und Wehre: Abstand zwiscehn 25 m und 75 m in maßgebenden Schnitten
+        def less_first(a, b):
+            return [a,b] if a < b else [b,a]
+
+        elems =model.by_type("IfcBorehole")
+
+        ansatzpunkte, bh_names = [], []
+        for i in elems:
+            parts =  i.IsDecomposedBy
+            points_per_borehole = []
+            if not parts:
+                continue
+            for j in parts:
+                stratums = j.RelatedObjects
+                for k in stratums:
+                    placement = k.ObjectPlacement
+                    c1 = placement.PlacementRelTo.RelativePlacement.Location.Coordinates
+                    c2 = placement.RelativePlacement.Location.Coordinates
+                    c3 = (c1[0]+c2[0], c1[1]+c2[1], c1[2]+c2[2])  # das sind die unterkanten
+                    representations = k.Representation.Representations
+                    representation = [i for i in representations if i.ContextOfItems.ContextIdentifier=="Body"][0]
+                    if len(representation.Items)!=1:
+                        raise ValueError(f"To many geometries assigned. Expected 1, got {len(representation.Items)}")
+                    geom = representation.Items[0]
+                    c4 = (c3[0] + geom.ExtrudedDirection.DirectionRatios[0] * geom.Depth,
+                        c3[1] + geom.ExtrudedDirection.DirectionRatios[1] * geom.Depth,
+                        c3[2] + geom.ExtrudedDirection.DirectionRatios[2] * geom.Depth)
+                    if not geom.is_a("IfcExtrudedAreaSolid"):
+                        raise ValueError(f"Expected an IfcExtrudedAreaSolid")
+                    position = geom.Position.Location.Coordinates
+                    c5 = (c4[0]+position[0], c4[1]+position[1], c4[2]+position[2])
+                    points_per_borehole.append(c5)
+            ansatzpunkt = sorted(points_per_borehole, key = lambda x : x[2], reverse=True)[0]
+            ansatzpunkte.append(ansatzpunkt)
+            bh_names.append(i.Name)
+
+        ansatzpunkte_3d = np.array([[i[0], i[1], i[2]] for i in ansatzpunkte]) 
+        ansatzpunkte =np.array([[i[0], i[1]] for i in ansatzpunkte]) # nur xy-Koordinaten
+        triangulation = Delaunay(ansatzpunkte)
+
+        edges, lengths = [], []
+        for triangle in triangulation.simplices:
+            for e1, e2 in [[0,1],[1,2],[2,0]]: # for all edges of triangle
+                edges.append(less_first(triangle[e1],triangle[e2]))
+        array_of_edges = np.unique(edges, axis=0)
+
+        for p1,p2 in array_of_edges:
+            x1, y1 = triangulation.points[p1]
+            x2, y2 = triangulation.points[p2]
+            lengths.append((x1-x2)**2 + (y1-y2)**2)
+        array_of_lengths = np.sqrt(np.array(lengths))
+
+        for i in array_of_lengths:
+            with self.subTest(i=i):
+                self.assertLess(float(i), 60)
+
+
 
     def test_ansprachebereich_geometry(self):
         """VIII.	Jeder Ansprachebereich wird als zylindrische Geometrie mit einem Durchmesser von einem Meter geometrisch repräsentiert."""
-
         elems = model.by_type("IfcBorehole")
         for elem in elems:
             with self.subTest(elem=elem):
@@ -185,12 +243,10 @@ class TestBoreholes(unittest.TestCase):
                 self.assertLessEqual(delta, 0.5)
 
 
-
-
 class TestSolidStratum(unittest.TestCase):   
     
     def test_bounds_cohesion(self):
-        """IX.	Werte für die CohesionBehaviour im Propertyset Pset_SolidStratumCapacity liegen im Intervall zwischen 0 und 1000 kN/m²."""
+        """X.	Werte für die CohesionBehaviour im Propertyset Pset_SolidStratumCapacity liegen im Intervall zwischen 0 und 1000 kN/m²."""
         elems = model.by_type("IfcSimpleProperty")
         elems = [i for i in elems if i.Name=="CohesionBehaviour"]
         elems = [i for i in elems if any(j.Name=="Pset_SolidStratumCapacity" for j in i.PartOfPset)]
@@ -202,15 +258,53 @@ class TestSolidStratum(unittest.TestCase):
                 self.assertLessEqual(value, 1000)
 
     def test_reibungswinkel_sand(self):
-        """X.	Wird ein Reibungswinkel für ein Element mit dem Material „Sand“ angegeben, so liegt er zwischen 27,5° und 37,5°."""
-        pass
+        """XI.	Wird ein Reibungswinkel für ein Element mit dem Material „Sand“ angegeben, so liegt er zwischen 27,5° und 37,5°."""
+        elems = [i for i in model.by_type("IfcSimpleProperty") if i.Name == "FrictionAngle"]
+        elems = [i for i in elems if any([j for j in i.PartOfPset if j.Name=="Pset_SolidStratumCapacity"])]
+        for elem in elems:
+            with self.subTest(elem=elem):
+                val = elem.NominalValue.wrappedValue
+                is_degrees = False
+                if elem.Unit == None:
+                    # get the unit for PLANEANGLEUNIT
+                    global_unit_assignments = model.by_type("IfcUnitAssignment")
+                    for i in global_unit_assignments:
+                        for j in i.Units:
+                            if hasattr(j, "UnitType"):
+                                if j.UnitType=="PLANEANGLEUNIT":
+                                    if "DEGREE" in j.Name.upper():
+                                        is_degrees = True
+                else:
+                    if "DEGREE" in elem.Unit.Name.upper():
+                        is_degrees = True
+
+                self.assertGreaterEqual(val, 27.5)
+                self.assertLessEqual(val, 37.5)
+                self.assertTrue(is_degrees)
 
     def test_material_color_DIN4023(self):
-        """XI.	Die Farben der Materialien, die für die Bau-grundschichten genutzt werden, entspre-chen den Vorgaben aus DIN 4023."""
-        pass
+        """XII.	Die Farben der Materialien, die für die Baugrundschichten genutzt werden, entsprechen den Vorgaben aus DIN 4023."""
+        elems = model.by_type("IfcGeotechnicalStratum")
+        elems = [i for i in elems if i.PredefinedType=="SOLID"]
 
+        colors_DIN4023 = {"Kies":  (219, 171, 6), "Sand": (198, 84, 47), "Auffuellung": (127, 127, 127)}
+
+        for elem in elems:
+            for relAssociatesMaterial in elem.HasAssociations:
+                with self.subTest(relAssociatesMaterial=relAssociatesMaterial):
+                    mat = relAssociatesMaterial.RelatingMaterial
+                    representations = mat.HasRepresentation
+                    for representation in representations:
+                        for style_rep in representation.Representations:
+                            for i in style_rep.Items:
+                                for style in i.Styles:
+                                    for style2 in style.Styles:
+                                        color= style2.SurfaceColour
+                                        rgb = (int(round(255*color.Red,0)), int(round(255*color.Green,0)), int(round(255*color.Blue,0)))
+                                        self.assertAlmostEqual(rgb, colors_DIN4023[mat.Name], f"Zugewiesenes Material {mat.Name} zu {elem} über {relAssociatesMaterial} hat eine andere SurfaceColor als erwartet")                                        
+        
     def test_unit_(self):
-        """XII"""
+        """XIII"""
         pass
 
 class TestIFCGeneral(unittest.TestCase):   
