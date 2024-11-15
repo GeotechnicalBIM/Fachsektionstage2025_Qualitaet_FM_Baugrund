@@ -9,6 +9,7 @@ import os
 import numpy as np
 import random
 import ifcopenshell.api.pset_template
+import ifcopenshell.validate
 
 # local imports. looks a bit weird, but as the code is executed in blender we have to add the paths manually
 
@@ -53,10 +54,10 @@ project = run("root.create_entity", model, ifc_class="IfcProject", name="Projekt
 project.Description = "Ein akademisches Projekt, das Teil des Beitrags von Johannes Beck zu den Fachsektionstagen Geotechnik 2025 in Würzburg ist"
 
 # Assigning without arguments defaults to metric units
-length_unit = ifcopenshell.api.unit.add_si_unit(model, unit_type="LENGTHUNIT") # Note: Default is mm 
+length_unit = ifcopenshell.api.unit.add_si_unit(model, unit_type="LENGTHUNIT") # Note: Default is mm, here meter (without prefix)
 area_unit = ifcopenshell.api.unit.add_si_unit(model, unit_type="AREAUNIT")
 money_unit = ifcopenshell.api.unit.add_monetary_unit(model, currency="EUR")
-mass_unit =  ifcopenshell.api.unit.add_si_unit(model, unit_type="MASSUNIT")
+mass_unit =  ifcopenshell.api.unit.add_si_unit(model, unit_type="MASSUNIT", prefix="KILO")
 angle_unit = ifcopenshell.api.unit.add_si_unit(model, unit_type="PLANEANGLEUNIT",) #RADIAN
 
 # Angles in degrees instead of radians.
@@ -65,7 +66,23 @@ measure_unit = model.create_entity("IFCMEASUREWITHUNIT", UnitComponent=angle_uni
 dim_exp = model.create_entity("IFCDIMENSIONALEXPONENTS", 0,0,0,0,0,0,0)
 angle_unit_degrees = model.create_entity("IFCCONVERSIONBASEDUNIT", ConversionFactor=measure_unit, Name="DEGREE", UnitType="PLANEANGLEUNIT", Dimensions=dim_exp)
 
-run("unit.assign_unit", model, units=[length_unit, area_unit, money_unit, angle_unit_degrees])
+# Mass unit kg_m3
+x1 = model.create_entity("IFCDERIVEDUNITELEMENT",mass_unit,1)
+x2 = model.create_entity("IFCDERIVEDUNITELEMENT",length_unit,3)
+kg_per_m3 = model.create_entity("IFCDERIVEDUNIT", Elements = [x1,x2], UnitType="MASSDENSITYUNIT", Name="kg_per_m3")
+
+# g for reference.
+val = model.create_entity("IFCMASSMEASURE", 0.001)
+measure_unit = model.create_entity("IFCMEASUREWITHUNIT", UnitComponent=mass_unit, ValueComponent=val)
+dim_exp = model.create_entity("IFCDIMENSIONALEXPONENTS", 0,1,0,0,0,0,0)
+mass_unit_g = model.create_entity("IFCCONVERSIONBASEDUNIT", ConversionFactor=measure_unit, Name="GRAMM", UnitType="MASSUNIT", Dimensions=dim_exp)
+x1 = model.create_entity("IFCDERIVEDUNITELEMENT",mass_unit_g,1)
+x2 = model.create_entity("IFCDERIVEDUNITELEMENT",length_unit,3)
+g_per_m3 = model.create_entity("IFCDERIVEDUNIT", Elements = [x1,x2], UnitType="MASSDENSITYUNIT", Name="g_per_m3")
+
+
+
+run("unit.assign_unit", model, units=[length_unit, area_unit, money_unit, angle_unit_degrees, kg_per_m3, g_per_m3])
 
 # Create the 3D context - for body representations
 context_3D = run("context.add_context", model, context_type="Model")
@@ -438,11 +455,32 @@ for bh in ifc_bhs:
 # Add custom properties using a custom property template
 template = ifcopenshell.api.pset_template.add_pset_template(model, name="Fachsektionstage2025_template")
 prop1 = ifcopenshell.api.pset_template.add_prop_template(model, pset_template=template, name="Wichte", description="Feuchtwichte des Bodens", template_type="P_SINGLEVALUE", primary_measure_type="IfcMassDensityMeasure") #kg/m3
+prop1.PrimaryUnit = kg_per_m3
 prop1 = ifcopenshell.api.pset_template.add_prop_template(model, pset_template=template, name="WichteBounded", description="Feuchtwichte des Bodens", template_type="P_BOUNDEDVALUE", primary_measure_type="IfcMassDensityMeasure") #kg/m3
+prop1.PrimaryUnit = kg_per_m3
+prop1.SecondaryUnit = kg_per_m3
+
+#b1 = ifcopenshell.create_entity("IfcPropertySingleValue", Name="LowerBound", NominalValue= model.create_entity("IfcReal", 0))
+#b2 = ifcopenshell.create_entity("IfcPropertySingleValue", Name="UpperBound", NominalValue= model.create_entity("IfcReal", 10.))
+#val = ifcopenshell.create_entity("IfcPropertySingleValue", Name="ActualValue", NominalValue= model.create_entity("IfcReal", 9))
+#boundedval = ifcopenshell.create_entity("IfcPropertyBoundedValue", Name="TestProperty", Description="A bounded Value", LowerBoundValue=b1, UpperBoundValue=b2)
+#boundedval.SetPointValue = val
+#print(dir(boundedval))
+
 
 for p in ifc_volumes:
     pset = ifcopenshell.api.pset.add_pset(model, product=p, name="Fachsektionstage2025")
     ifcopenshell.api.pset.edit_pset(model, pset=pset, properties={"Wichte": 19_000, "IsFun": True}, pset_template=template)
+    
+    #b1 = model.create_entity("IfcPropertySingleValue", Name="LowerBound", NominalValue= model.create_entity("IfcReal", 0.), Unit=kg_per_m3)
+    #b2 = model.create_entity("IfcPropertySingleValue", Name="UpperBound", NominalValue= model.create_entity("IfcReal", 30.), Unit=kg_per_m3)
+    #val = model.create_entity("IfcPropertySingleValue", Name="ActualValue", NominalValue= model.create_entity("IfcReal", 12.7), Unit=kg_per_m3)
+    #boundedval = model.create_entity("IfcPropertyBoundedValue", Name="WichteBound",  LowerBoundValue=b1, UpperBoundValue=b2)
+    #boundedval.SetPointValue = val    
+
+
+    #pset.HasProperties = pset.HasProperties + (boundedval,)
+
 
 # Save file and load the project
 fp = parent_path+"/project_data/script_output_4x3.ifc"
@@ -457,7 +495,17 @@ incorrect_borehole1 = run("root.create_entity", model, ifc_class="IfcBorehole", 
 fp = parent_path+"/project_data/script_output_4x3_with_errors.ifc"
 model.write(fp)
 
+# Reload for validation needed due to serialization issues, see https://github.com/IfcOpenShell/IfcOpenShell/issues/5364
+validate = True
+if validate:
+    model = ifcopenshell.open(fp)
+    logger = ifcopenshell.validate.json_logger()
+    ifcopenshell.validate.validate(model, logger)  # type: ignore
 
+    print("XXXXX VALIDATION XXXXXX")
+    if len(logger.statements):
+        for i in logger.statements:
+            print(i, "\n")
 
 proj = bpy.ops.bim.load_project(filepath=fp, use_relative_path=False, should_start_fresh_session=False)
 print("Done.")
