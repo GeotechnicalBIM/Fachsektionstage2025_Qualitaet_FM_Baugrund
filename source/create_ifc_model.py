@@ -472,14 +472,16 @@ for p in ifc_volumes:
     pset = ifcopenshell.api.pset.add_pset(model, product=p, name="Fachsektionstage2025")
     ifcopenshell.api.pset.edit_pset(model, pset=pset, properties={"Wichte": 19_000, "IsFun": True}, pset_template=template)
     
-    #b1 = model.create_entity("IfcPropertySingleValue", Name="LowerBound", NominalValue= model.create_entity("IfcReal", 0.), Unit=kg_per_m3)
-    #b2 = model.create_entity("IfcPropertySingleValue", Name="UpperBound", NominalValue= model.create_entity("IfcReal", 30.), Unit=kg_per_m3)
+    #b1 = model.create_entity("IfcPropertySingleValue", Name="LowerBound", NominalValue= model.create_entity("IfcReal", 0.))
+    #b2 = model.create_entity("IfcPropertySingleValue", Name="UpperBound", NominalValue= model.create_entity("IfcReal", 30.))
     #val = model.create_entity("IfcPropertySingleValue", Name="ActualValue", NominalValue= model.create_entity("IfcReal", 12.7), Unit=kg_per_m3)
-    #boundedval = model.create_entity("IfcPropertyBoundedValue", Name="WichteBound",  LowerBoundValue=b1, UpperBoundValue=b2)
-    #boundedval.SetPointValue = val    
-
-
-    #pset.HasProperties = pset.HasProperties + (boundedval,)
+    
+    boundedval = model.create_entity("IfcPropertyBoundedValue", Name="WichteBound",  LowerBoundValue=model.create_entity("IfcMassDensityMeasure", 0.), 
+                                     UpperBoundValue=model.create_entity("IfcMassDensityMeasure", 30.))
+    
+    boundedval.SetPointValue = model.create_entity("IfcMassDensityMeasure", 19.8)    
+    boundedval.Unit = kg_per_m3
+    pset.HasProperties = pset.HasProperties + (boundedval,)
 
 
 # Save file and load the project
