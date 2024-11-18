@@ -143,6 +143,19 @@ class BlenderUtils:
             new_obj.animation_data_clear()
             C.collection.objects.link(new_obj)
 
+        # FLIP THE SURFACE
+        #srf = bpy.data.objects[surface_name]
+        #bpy.context.view_layer.objects.active = srf
+        #srf.select_set(True)
+        #bpy.ops.object.mode_set(mode='EDIT')
+        
+        #mesh = bmesh.from_edit_mesh(srf.data)
+        #bmesh.ops.reverse_faces(mesh, faces=mesh.faces)
+        #bmesh.update_edit_mesh(srf.data, loop_triangles=True)
+        #bpy.ops.object.mode_set(mode='OBJECT')
+
+
+
         # get both objects
 
         obj1 = bpy.data.objects[mesh_name]
@@ -183,11 +196,11 @@ class BlenderUtils:
 
         faces = BlenderUtils.detectByFaces()
 
-        for i in[0,3]:
+        for i in [0,3]: # Select the correct faces
             bm = bmesh.from_edit_mesh(bpy.context.edit_object.data)
             bm.faces.ensure_lookup_table()
             bm.faces[faces[i][0]].select = True  # select by index
-            bmesh.update_edit_mesh(bpy.context.edit_object.data)
+            bmesh.update_edit_mesh(bpy.context.edit_object.data, loop_triangles=True)
             bm.free()
             bpy.ops.mesh.select_linked(delimit={'SEAM'})
 
@@ -197,7 +210,7 @@ class BlenderUtils:
         mesh = bmesh.from_edit_mesh(bpy.context.edit_object.data)
         for elem in mesh.verts if mesh.select_mode & {'VERT'} else (mesh.edges if mesh.select_mode & {'EDGE'} else mesh.faces):
             elem.select = not elem.select
-        bmesh.update_edit_mesh(bpy.context.edit_object.data)
+
         # DELETE SELECTION
         bpy.ops.mesh.delete(type='VERT')
 
@@ -245,6 +258,14 @@ class BlenderUtils:
 
         bpy.ops.object.mode_set(mode="OBJECT")
 
+        # UPDATE THE ORIENTATION!!!
+        bpy.ops.object.mode_set(mode="EDIT")
+        for obj in [bpy.data.objects[mesh_name+"_1"], bpy.data.objects[mesh_name+"_1"]]:
+            bpy.context.view_layer.objects.active = obj
+            bpy.ops.mesh.select_all(action='SELECT')
+            bpy.ops.mesh.normals_make_consistent(inside=False)
+
+        bpy.ops.object.mode_set(mode="OBJECT")
 
         if keep_original_mesh:
             org_mesh = bpy.data.objects[mesh_name+"_org"]

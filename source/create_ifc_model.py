@@ -68,7 +68,7 @@ angle_unit_degrees = model.create_entity("IFCCONVERSIONBASEDUNIT", ConversionFac
 
 # Mass unit kg_m3
 x1 = model.create_entity("IFCDERIVEDUNITELEMENT",mass_unit,1)
-x2 = model.create_entity("IFCDERIVEDUNITELEMENT",length_unit,3)
+x2 = model.create_entity("IFCDERIVEDUNITELEMENT",length_unit,-3)
 kg_per_m3 = model.create_entity("IFCDERIVEDUNIT", Elements = [x1,x2], UnitType="MASSDENSITYUNIT", Name="kg_per_m3")
 
 # g for reference.
@@ -77,7 +77,7 @@ measure_unit = model.create_entity("IFCMEASUREWITHUNIT", UnitComponent=mass_unit
 dim_exp = model.create_entity("IFCDIMENSIONALEXPONENTS", 0,1,0,0,0,0,0)
 mass_unit_g = model.create_entity("IFCCONVERSIONBASEDUNIT", ConversionFactor=measure_unit, Name="GRAMM", UnitType="MASSUNIT", Dimensions=dim_exp)
 x1 = model.create_entity("IFCDERIVEDUNITELEMENT",mass_unit_g,1)
-x2 = model.create_entity("IFCDERIVEDUNITELEMENT",length_unit,3)
+x2 = model.create_entity("IFCDERIVEDUNITELEMENT",length_unit,-3)
 g_per_m3 = model.create_entity("IFCDERIVEDUNIT", Elements = [x1,x2], UnitType="MASSDENSITYUNIT", Name="g_per_m3")
 
 
@@ -454,9 +454,9 @@ for bh in ifc_bhs:
 
 # Add custom properties using a custom property template
 template = ifcopenshell.api.pset_template.add_pset_template(model, name="Fachsektionstage2025_template")
-prop1 = ifcopenshell.api.pset_template.add_prop_template(model, pset_template=template, name="Wichte", description="Feuchtwichte des Bodens", template_type="P_SINGLEVALUE", primary_measure_type="IfcMassDensityMeasure") #kg/m3
-prop1.PrimaryUnit = kg_per_m3
-prop1 = ifcopenshell.api.pset_template.add_prop_template(model, pset_template=template, name="WichteBounded", description="Feuchtwichte des Bodens", template_type="P_BOUNDEDVALUE", primary_measure_type="IfcMassDensityMeasure") #kg/m3
+prop1 = ifcopenshell.api.pset_template.add_prop_template(model, pset_template=template, name="WichteFeucht", description="Feuchtwichte des Bodens", template_type="P_SINGLEVALUE", primary_measure_type="IfcMassDensityMeasure") #kg/m3
+prop1.PrimaryUnit = g_per_m3
+prop1 = ifcopenshell.api.pset_template.add_prop_template(model, pset_template=template, name="WichteUnterAuftrieb", description="Wichte des Bodens unter Auftrieb", template_type="P_BOUNDEDVALUE", primary_measure_type="IfcMassDensityMeasure") #kg/m3
 prop1.PrimaryUnit = kg_per_m3
 prop1.SecondaryUnit = kg_per_m3
 
@@ -470,13 +470,14 @@ prop1.SecondaryUnit = kg_per_m3
 
 for p in ifc_volumes:
     pset = ifcopenshell.api.pset.add_pset(model, product=p, name="Fachsektionstage2025")
-    ifcopenshell.api.pset.edit_pset(model, pset=pset, properties={"Wichte": 19_000, "IsFun": True}, pset_template=template)
-    
-    #b1 = model.create_entity("IfcPropertySingleValue", Name="LowerBound", NominalValue= model.create_entity("IfcReal", 0.))
-    #b2 = model.create_entity("IfcPropertySingleValue", Name="UpperBound", NominalValue= model.create_entity("IfcReal", 30.))
-    #val = model.create_entity("IfcPropertySingleValue", Name="ActualValue", NominalValue= model.create_entity("IfcReal", 12.7), Unit=kg_per_m3)
-    
-    boundedval = model.create_entity("IfcPropertyBoundedValue", Name="WichteBound",  LowerBoundValue=model.create_entity("IfcMassDensityMeasure", 0.), 
+    ifcopenshell.api.pset.edit_pset(model, pset=pset, properties={"WichteFeucht": 19_000, "IsRelevant": True}, pset_template=template) # Note: by setting the properties this way, no units from the template are passed. Yet, the mesasure type is passed
+
+    # Edit the property WichteFeucht
+    prop_wichte_feucht = [i for i in pset.HasProperties if i.Name == "WichteFeucht"][0]
+    prop_wichte_feucht.Unit = g_per_m3
+
+    # Add a bounded value without using the PropertySetTemplate
+    boundedval = model.create_entity("IfcPropertyBoundedValue", Name="WichteUnterAuftrieb",  LowerBoundValue=model.create_entity("IfcMassDensityMeasure", 0.), 
                                      UpperBoundValue=model.create_entity("IfcMassDensityMeasure", 30.))
     
     boundedval.SetPointValue = model.create_entity("IfcMassDensityMeasure", 19.8)    

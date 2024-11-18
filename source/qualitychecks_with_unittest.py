@@ -304,14 +304,32 @@ class TestSolidStratum(unittest.TestCase):
                                         self.assertAlmostEqual(rgb, colors_DIN4023[mat.Name], f"Zugewiesenes Material {mat.Name} zu {elem} über {relAssociatesMaterial} hat eine andere SurfaceColor als erwartet")                                        
         
     def test_unit_(self):
-        """XIII"""
-        pass
+        """XIII.	Die Wichte unter Auftrieb ist in kg pro m³ anzugeben."""
+        elems = model.by_type("IfcSimpleProperty")
+        elems = [i for i in elems if any(j in i.Name for j in ["WichteUnterAuftrieb"])]
+        
+        for elem in elems:
+            with self.subTest(elem=elem):
+                unit = elem.Unit
+                self.assertEqual(unit.is_a(), "IfcDerivedUnit")
+                self.assertEqual(unit.UnitType, "MASSDENSITYUNIT")
+              
+                for derivedunitelem in unit.Elements:
+                    derivedunitelem_unit = derivedunitelem.Unit
+                    if derivedunitelem_unit.UnitType == "LENGTHUNIT":
+                        self.assertEqual(derivedunitelem.Exponent, -3)
+                        self.assertEqual(derivedunitelem_unit.is_a(), "IfcSIUnit")
+                        self.assertIsNone(derivedunitelem_unit.Prefix)
+                    elif derivedunitelem_unit.UnitType == "MASSUNIT":
+                        self.assertEqual(derivedunitelem.Exponent, 1)
+                        self.assertEqual(derivedunitelem_unit.is_a(), "IfcSIUnit")
+                        self.assertEqual(derivedunitelem_unit.Prefix, "KILO")
+
 
 class TestIFCGeneral(unittest.TestCase):   
     
     def test_nominal_values_in_bounds(self):
         """XIII.	Die Nominalwerte sämtlicher Eigenschaften mit Grenzwerten müssen innerhalb dieser Grenzen liegen"""
-
         elems = model.by_type("IfcPropertyBoundedValue")
         for elem in elems:
             with self.subTest(elem=elem):
