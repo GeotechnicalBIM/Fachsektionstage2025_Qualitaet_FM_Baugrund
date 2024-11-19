@@ -1,4 +1,3 @@
-
 import unittest
 from collections import Counter
 
@@ -15,7 +14,8 @@ from scipy.interpolate import griddata, LinearNDInterpolator
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 parent_path = os.path.dirname(dir_path)
-fp = parent_path+"/project_data/script_output_4x3_with_errors.ifc"
+fp = parent_path+"/project_data/script_output_4x3_with_errors.ifc" 
+#fp = parent_path+"/project_data/script_output_4x3.ifc" # Hinweis: Abstand der Bohrungen ist nicht korrekt
 model = ifcopenshell.open(fp)
 
 
@@ -262,6 +262,15 @@ class TestSolidStratum(unittest.TestCase):
         elems = [i for i in model.by_type("IfcSimpleProperty") if i.Name == "FrictionAngle"]
         elems = [i for i in elems if any([j for j in i.PartOfPset if j.Name=="Pset_SolidStratumCapacity"])]
         for elem in elems:
+            is_related_to_a_sand = False
+            for pset in elem.PartOfPset:
+                for rel in pset.DefinesOccurrence:
+                    for parent_obj in rel.RelatedObjects:
+                        for association in parent_obj.HasAssociations:
+                            if association.RelatingMaterial.Name=="Sand":
+                                is_related_to_a_sand = True
+            if not is_related_to_a_sand:
+                continue
             with self.subTest(elem=elem):
                 val = elem.NominalValue.wrappedValue
                 is_degrees = False
@@ -301,7 +310,7 @@ class TestSolidStratum(unittest.TestCase):
                                     for style2 in style.Styles:
                                         color= style2.SurfaceColour
                                         rgb = (int(round(255*color.Red,0)), int(round(255*color.Green,0)), int(round(255*color.Blue,0)))
-                                        self.assertAlmostEqual(rgb, colors_DIN4023[mat.Name], f"Zugewiesenes Material {mat.Name} zu {elem} über {relAssociatesMaterial} hat eine andere SurfaceColor als erwartet")                                        
+                                        self.assertEqual(rgb, colors_DIN4023[mat.Name], f"Zugewiesenes Material {mat.Name} zu {elem} über {relAssociatesMaterial} hat eine andere SurfaceColor als erwartet")                                        
         
     def test_unit_(self):
         """XIII.	Die Wichte unter Auftrieb ist in kg pro m³ anzugeben."""

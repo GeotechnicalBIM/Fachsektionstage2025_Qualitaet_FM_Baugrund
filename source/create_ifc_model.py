@@ -457,7 +457,7 @@ ifcopenshell.api.pset.edit_pset(model, pset=Pset_SolidStratumCapacity, propertie
 
 p = [i for i in ifc_volumes if i.Name=="G"][0]
 Pset_SolidStratumCapacity = ifcopenshell.api.pset.add_pset(model, product=p, name="Pset_SolidStratumCapacity")
-ifcopenshell.api.pset.edit_pset(model, pset=Pset_SolidStratumCapacity, properties={"CohesionBehaviour": 10_000, "FrictionAngle": 40, "PoisonsRatio":0.2}, should_purge=False)
+ifcopenshell.api.pset.edit_pset(model, pset=Pset_SolidStratumCapacity, properties={"CohesionBehaviour": 0, "FrictionAngle": 40, "PoisonsRatio":0.2}, should_purge=False)
 
 # Add a QTO for the soil layer elements including the volume.
 settings = ifcopenshell.geom.settings()
@@ -492,7 +492,7 @@ prop1.SecondaryUnit = kg_per_m3
 
 for p in ifc_volumes:
     pset = ifcopenshell.api.pset.add_pset(model, product=p, name="Fachsektionstage2025")
-    ifcopenshell.api.pset.edit_pset(model, pset=pset, properties={"WichteFeucht": 19_000, "IsRelevant": True}, pset_template=template) # Note: by setting the properties this way, no units from the template are passed. Yet, the mesasure type is passed
+    ifcopenshell.api.pset.edit_pset(model, pset=pset, properties={"WichteFeucht": model.create_entity("IfcMassDensityMeasure", 19_000.), "IsRelevant": True}, pset_template=template) # Note: by setting the properties this way, no units from the template are passed. Yet, the mesasure type is passed
 
     # Edit the property WichteFeucht
     prop_wichte_feucht = [i for i in pset.HasProperties if i.Name == "WichteFeucht"][0]
@@ -511,11 +511,87 @@ for p in ifc_volumes:
 fp = parent_path+"/project_data/script_output_4x3.ifc"
 model.write(fp)
 
-# Add some issues for showing how the tests work
-incorrect_layerelement = run("root.create_entity", model, ifc_class="IfcGeotechnicalStratum", name="wrong_borehole_name_xy", predefined_type="KEIN_ANSPRACHEBEREICH")
+# ADD ERRORS / ISSUES to showcase the tests
+incorrect_layerelement = run("root.create_entity", model, ifc_class="IfcGeotechnicalStratum", name="wrong_borehole_name_xy", predefined_type="KEIN_ANSPRACHEBEREICH") # III
 incorrect_layerelement2 = run("root.create_entity", model, ifc_class="IfcGeotechnicalStratum", name="wrong_borehole_name_xy", predefined_type="ANSPRACHEBEREICH")
-incorrect_borehole = run("root.create_entity", model, ifc_class="IfcBorehole", name="wrong_borehole_name")
-incorrect_borehole1 = run("root.create_entity", model, ifc_class="IfcBorehole", name="wrong_borehole_name")
+incorrect_borehole = run("root.create_entity", model, ifc_class="IfcBorehole", name="wrong_borehole_name") # I, II, IV
+incorrect_borehole1 = run("root.create_entity", model, ifc_class="IfcBorehole", name="wrong_borehole_name") # V
+# VII, VIII, IX not edited
+
+# Get the soil volume for sand and modify it
+elem = [i for i in model.by_type("IfcGeotechnicalStratum") if (i.Name == "S" and i.PredefinedType=="SOLID")][0]
+
+print(f"ELEMENT TO MODIFY: {elem}")
+
+# MODIFY THE UNIT OF THE WICHTE UNTER AUFTRIEB
+psets = model.by_type("IfcPropertySet")
+psets = [i for i in psets if i.Name=="Fachsektionstage2025"]
+for pset in psets:
+    for rel in pset.DefinesOccurrence:
+        for parent_obj in rel.RelatedObjects:
+            if parent_obj == elem:
+                final_pset = pset
+                #print("PSET FOUND", pset, "\n", "\t", parent_obj,"\n", "\t",  elem,)
+                break
+        if final_pset: break
+    if final_pset: break
+properties = final_pset.HasProperties
+wichte_unter_auftrieb = [i for i in properties if i.Name=="WichteUnterAuftrieb"][0]
+wichte_unter_auftrieb.Unit = None
+
+
+# MODIFY THE VALUE OF THE COHESION AND THE FRICTION ANGLE
+psets = model.by_type("IfcPropertySet")
+psets = [i for i in psets if i.Name=="Pset_SolidStratumCapacity"]
+for pset in psets:
+    for rel in pset.DefinesOccurrence:
+        for parent_obj in rel.RelatedObjects:
+            if parent_obj == elem:
+                final_pset = pset
+                #print("PSET FOUND", pset, "\n", "\t", parent_obj,"\n", "\t",  elem,)
+                break
+        if final_pset: break
+    if final_pset: break
+properties = final_pset.HasProperties
+cohesion = [i for i in properties if i.Name=="CohesionBehaviour"][0]
+cohesion.NominalValue = model.create_entity("IfcPressureMeasure", 1001)
+friction_angle = [i for i in properties if i.Name=="FrictionAngle"][0]
+friction_angle.NominalValue = model.create_entity("IfcPlaneAngleMeasure", 40.1)
+
+# MODIFY THE VALUE OF THE VOLUME
+qtos = model.by_type("IfcElementQuantity")
+
+qtos = [i for i in qtos if i.Name=="Qto_VolumetricStratumBaseQuantities"]
+
+for qto in qtos:
+    for rel in pset.DefinesOccurrence:
+        for parent_obj in rel.RelatedObjects:
+            if parent_obj == elem:
+                final_qto = qto
+                #print("QTO FOUND", qto, "\n", "\t", parent_obj,"\n", "\t",  elem,)
+                break
+        if final_qto: break
+    if final_qto: break
+quantities = final_qto.Quantities
+volume = [i for i in quantities if i.Name=="Volume"][0]
+volume.VolumeValue = 1000
+
+
+# Change the material color.
+for relAssociatesMaterial in elem.HasAssociations:
+    mat = relAssociatesMaterial.RelatingMaterial
+    representations = mat.HasRepresentation
+    for representation in representations:
+        for style_rep in representation.Representations:
+            for i in style_rep.Items:
+                for style in i.Styles:
+                    for style2 in style.Styles:
+                        color= style2.SurfaceColour
+                        color.Red = 1
+                        color.Green = 1 
+                        color.Blue = 1
+
+
 
 fp = parent_path+"/project_data/script_output_4x3_with_errors.ifc"
 model.write(fp)
