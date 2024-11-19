@@ -325,11 +325,30 @@ class TestSolidStratum(unittest.TestCase):
                         self.assertEqual(derivedunitelem_unit.is_a(), "IfcSIUnit")
                         self.assertEqual(derivedunitelem_unit.Prefix, "KILO")
 
+    def test_volume(self):
+        """XIV.	Das Volumen im Qto_VolumetricStratumBaseQuantities entspricht dem Volumen, das durch die geometrische Repräsentation beschrieben wird."""
+        settings = ifcopenshell.geom.settings()
+        volume_qto = None
+        elems = model.by_type("IfcGeotechnicalStratum")
+        elems = [i for i in elems if i.PredefinedType=="SOLID"]
+        for elem in elems:
+            with self.subTest(elem=elem):
+                volume_qto=None
+                psets =ifcopenshell.util.element.get_psets(elem)
+                if "Qto_VolumetricStratumBaseQuantities" in psets.keys():
+                    qto = psets["Qto_VolumetricStratumBaseQuantities"]
+                    if "Volume" in qto.keys():
+                        volume_qto = qto["Volume"]
+                if not volume_qto:
+                    continue
+                shape = ifcopenshell.geom.create_shape(settings, elem)
+                volume_calc = ifcopenshell.util.shape.get_volume(shape.geometry)
+                self.assertLessEqual(abs(volume_qto - volume_calc), 0.01)
 
 class TestIFCGeneral(unittest.TestCase):   
     
     def test_nominal_values_in_bounds(self):
-        """XIII.	Die Nominalwerte sämtlicher Eigenschaften mit Grenzwerten müssen innerhalb dieser Grenzen liegen"""
+        """XV.	Die Nominalwerte sämtlicher Eigenschaften mit Grenzwerten müssen innerhalb dieser Grenzen liegen"""
         elems = model.by_type("IfcPropertyBoundedValue")
         for elem in elems:
             with self.subTest(elem=elem):
@@ -338,7 +357,7 @@ class TestIFCGeneral(unittest.TestCase):
 
 
     def test_file_size(self):
-        """XIV.	Die Dateigröße darf 10 MB nicht überschreiten."""
+        """XVI.	Die Dateigröße darf 10 MB nicht überschreiten."""
         # Global variable fp contains the filepath to the ifc path to be checked
         file_size = os.stat(fp).st_size
         file_size_mb = file_size / (1023 * 1024)

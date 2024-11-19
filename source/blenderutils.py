@@ -97,6 +97,7 @@ class BlenderUtils:
         two closed meshes.
 
         Note that there are several assumption made. Ensure that the split will return two meshes.
+        Note: Unify the face normals afterwards.
 
         Returns two objects with the names mesh_name+_1 and mesh_name+_2
 
@@ -142,19 +143,6 @@ class BlenderUtils:
             new_obj.name = surface_name + "_org"
             new_obj.animation_data_clear()
             C.collection.objects.link(new_obj)
-
-        # FLIP THE SURFACE
-        #srf = bpy.data.objects[surface_name]
-        #bpy.context.view_layer.objects.active = srf
-        #srf.select_set(True)
-        #bpy.ops.object.mode_set(mode='EDIT')
-        
-        #mesh = bmesh.from_edit_mesh(srf.data)
-        #bmesh.ops.reverse_faces(mesh, faces=mesh.faces)
-        #bmesh.update_edit_mesh(srf.data, loop_triangles=True)
-        #bpy.ops.object.mode_set(mode='OBJECT')
-
-
 
         # get both objects
 
@@ -257,23 +245,6 @@ class BlenderUtils:
         # FINISH SECOND PART.
 
         bpy.ops.object.mode_set(mode="OBJECT")
-
-        # UPDATE THE ORIENTATION!!!
-        #https://b3d.interplanety.org/en/recalculating-mesh-normals-using-the-blender-python-api/
-        # bpy.ops.object.select_all(action='DESELECT')
-        # object_names = [mesh_name+"_1", mesh_name+"_2"]
-        # for name in object_names:
-        #     obj = bpy.data.objects[name]
-        #     obj.select_set(True)
-        # bpy.ops.object.mode_set(mode="EDIT")
-
-        # for obj in bpy.context.selected_objects:
-        #     bpy.context.view_layer.objects.active = obj
-        #     bpy.ops.mesh.select_all(action='SELECT')
-        #     bpy.ops.mesh.normals_make_consistent(inside=False)
-        #     print("Tried to make the normals consistent.")
-
-        # bpy.ops.object.mode_set(mode="OBJECT")
 
         if keep_original_mesh:
             org_mesh = bpy.data.objects[mesh_name+"_org"]

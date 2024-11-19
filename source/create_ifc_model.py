@@ -459,6 +459,15 @@ p = [i for i in ifc_volumes if i.Name=="G"][0]
 Pset_SolidStratumCapacity = ifcopenshell.api.pset.add_pset(model, product=p, name="Pset_SolidStratumCapacity")
 ifcopenshell.api.pset.edit_pset(model, pset=Pset_SolidStratumCapacity, properties={"CohesionBehaviour": 10_000, "FrictionAngle": 40, "PoisonsRatio":0.2}, should_purge=False)
 
+# Add a QTO for the soil layer elements including the volume.
+settings = ifcopenshell.geom.settings()
+elems = model.by_type("IfcGeotechnicalStratum")
+elems = [i for i in elems if i.PredefinedType=="SOLID"]
+for elem in elems:
+    qto = ifcopenshell.api.pset.add_qto(model, product=elem, name="Qto_VolumetricStratumBaseQuantities")
+    shape = ifcopenshell.geom.create_shape(settings, elem)
+    volume = ifcopenshell.util.shape.get_volume(shape.geometry)
+    ifcopenshell.api.pset.edit_qto(model, qto=qto, properties={"Volume": volume})
 
 for bh in ifc_bhs:
     Pset_BoreholeCommon = ifcopenshell.api.pset.add_pset(model, product=bh, name="Pset_BoreholeCommon")
