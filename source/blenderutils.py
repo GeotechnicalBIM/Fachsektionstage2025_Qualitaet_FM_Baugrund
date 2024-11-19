@@ -259,13 +259,21 @@ class BlenderUtils:
         bpy.ops.object.mode_set(mode="OBJECT")
 
         # UPDATE THE ORIENTATION!!!
-        bpy.ops.object.mode_set(mode="EDIT")
-        for obj in [bpy.data.objects[mesh_name+"_1"], bpy.data.objects[mesh_name+"_1"]]:
-            bpy.context.view_layer.objects.active = obj
-            bpy.ops.mesh.select_all(action='SELECT')
-            bpy.ops.mesh.normals_make_consistent(inside=False)
+        #https://b3d.interplanety.org/en/recalculating-mesh-normals-using-the-blender-python-api/
+        # bpy.ops.object.select_all(action='DESELECT')
+        # object_names = [mesh_name+"_1", mesh_name+"_2"]
+        # for name in object_names:
+        #     obj = bpy.data.objects[name]
+        #     obj.select_set(True)
+        # bpy.ops.object.mode_set(mode="EDIT")
 
-        bpy.ops.object.mode_set(mode="OBJECT")
+        # for obj in bpy.context.selected_objects:
+        #     bpy.context.view_layer.objects.active = obj
+        #     bpy.ops.mesh.select_all(action='SELECT')
+        #     bpy.ops.mesh.normals_make_consistent(inside=False)
+        #     print("Tried to make the normals consistent.")
+
+        # bpy.ops.object.mode_set(mode="OBJECT")
 
         if keep_original_mesh:
             org_mesh = bpy.data.objects[mesh_name+"_org"]

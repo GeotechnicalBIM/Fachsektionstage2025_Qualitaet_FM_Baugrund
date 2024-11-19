@@ -356,12 +356,6 @@ for srf in [srf_b, srf_a]:
                     collection.objects.unlink(org_surface)  
     
 
-# Hide the blender collections
-bpy.data.collections[topo_coll_name].hide_viewport = True  
-bpy.data.collections[srf_coll_name].hide_viewport = True  
-bpy.data.collections[vol_coll_name].hide_viewport = True  
-
-
 # Lazy identification of subsoil volumes as we know the order to be A-G-S.
 z_max_collector = []
 for m in bpy.data.collections[vol_coll_name].objects:
@@ -378,6 +372,25 @@ layernames = ["A", "G", "S"]
 for name_ind, name in enumerate(names):
     obj = bpy.data.collections[vol_coll_name].objects[name]
     obj.name = layernames[name_ind]
+
+
+# FIX THE ORIENTATIONS OF MESH FAXES
+bpy.ops.object.select_all(action='DESELECT')
+for name_ind, name in enumerate(layernames):
+    obj = bpy.data.objects[name]
+    obj.select_set(True)
+for obj in bpy.context.selected_objects:
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.normals_make_consistent(inside=False)
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+
+# Hide the blender collections. Note: This has to be done after fixing the face orientations.
+bpy.data.collections[topo_coll_name].hide_viewport = True  
+bpy.data.collections[srf_coll_name].hide_viewport = True  
+bpy.data.collections[vol_coll_name].hide_viewport = True  
 
 
 # ADD SOIL LAYERS TO IFC FILE
