@@ -1,13 +1,11 @@
 import unittest
 from collections import Counter
-
 import os
 import re
 import ifcopenshell
 from ifcopenshell.api import run
 import ifcopenshell.util.element
 import ifcopenshell.util.selector
-
 import numpy as np
 from scipy.spatial import Delaunay
 from scipy.interpolate import griddata, LinearNDInterpolator
@@ -81,7 +79,6 @@ class TestBoreholes(unittest.TestCase):
                 self.assertEqual(counter[elem.Name], 1, f"Name {elem.Name} kommt {counter[elem.Name]} mal vor.")
 
 
-
     def test_namingconvention_ansprachebereiche(self):
         """VI.	Die Namen der Ansprachebereiche entsprechen dem der zugehörigen IfcBoreholes, folgt von einem Unterstrich und drei Ziffern."""
         elems = model.by_type("IfcGeotechnicalStratum")
@@ -97,7 +94,6 @@ class TestBoreholes(unittest.TestCase):
                         bh_name = i.RelatingObject.Name
                         self.assertRegex(elem.Name, fr'^{re.escape(bh_name)}_\d{{3}}$', "X"*100)
     
-
 
     def test_distances_ifcboreholes(self):
         """VII.	Die Abstände der Bohrungen (Bohrraster) entsprechen den Empfehlungen aus DIN EN 1997-2 Anlage B3."""
@@ -162,7 +158,6 @@ class TestBoreholes(unittest.TestCase):
                 self.assertLess(float(i), 60)
 
 
-
     def test_ansprachebereich_geometry(self):
         """VIII.	Jeder Ansprachebereich wird als zylindrische Geometrie mit einem Durchmesser von einem Meter geometrisch repräsentiert."""
         elems = model.by_type("IfcBorehole")
@@ -186,6 +181,10 @@ class TestBoreholes(unittest.TestCase):
                             sweptarea = item.SweptArea
                             if sweptarea.is_a("IfcCircleProfileDef"):
                                 self.assertNotEqual(sweptarea.Radius, 1.0)
+                                # Option update:
+                                #sweptarea.Radius = 1.0
+                                #model.write(fp)
+                                #model = ifcopenshell.open(fp)
                             else:
                                 self.assertTrue(sweptarea.is_a("IfcCircleProfileDef"))
 
@@ -199,10 +198,8 @@ class TestBoreholes(unittest.TestCase):
         rep = topograhy.Representation.Representations[0].Items[0]
         topograhy_coords = rep.Coordinates.CoordList
         topograhy_coords_2d = [[i[0], i[1]] for i in topograhy_coords]
-
-        
+   
         elems = model.by_type("IfcBorehole")
-
         for elem in elems:
             with self.subTest(elem=elem):
                 parts = elem.IsDecomposedBy
@@ -244,7 +241,6 @@ class TestBoreholes(unittest.TestCase):
 
 
 class TestSolidStratum(unittest.TestCase):   
-    
     def test_bounds_cohesion(self):
         """X.	Werte für die CohesionBehaviour im Propertyset Pset_SolidStratumCapacity liegen im Intervall zwischen 0 und 1000 kN/m²."""
         elems = model.by_type("IfcSimpleProperty")
@@ -291,6 +287,7 @@ class TestSolidStratum(unittest.TestCase):
                 self.assertLessEqual(val, 37.5)
                 self.assertTrue(is_degrees)
 
+
     def test_material_color_DIN4023(self):
         """XII.	Die Farben der Materialien, die für die Baugrundschichten genutzt werden, entsprechen den Vorgaben aus DIN 4023."""
         elems = model.by_type("IfcGeotechnicalStratum")
@@ -312,6 +309,7 @@ class TestSolidStratum(unittest.TestCase):
                                         rgb = (int(round(255*color.Red,0)), int(round(255*color.Green,0)), int(round(255*color.Blue,0)))
                                         self.assertEqual(rgb, colors_DIN4023[mat.Name], f"Zugewiesenes Material {mat.Name} zu {elem} über {relAssociatesMaterial} hat eine andere SurfaceColor als erwartet")                                        
         
+
     def test_unit_(self):
         """XIII.	Die Wichte unter Auftrieb ist in kg pro m³ anzugeben."""
         elems = model.by_type("IfcSimpleProperty")
@@ -334,6 +332,7 @@ class TestSolidStratum(unittest.TestCase):
                         self.assertEqual(derivedunitelem_unit.is_a(), "IfcSIUnit")
                         self.assertEqual(derivedunitelem_unit.Prefix, "KILO")
 
+
     def test_volume(self):
         """XIV.	Das Volumen im Qto_VolumetricStratumBaseQuantities entspricht dem Volumen, das durch die geometrische Repräsentation beschrieben wird."""
         settings = ifcopenshell.geom.settings()
@@ -354,8 +353,8 @@ class TestSolidStratum(unittest.TestCase):
                 volume_calc = ifcopenshell.util.shape.get_volume(shape.geometry)
                 self.assertLessEqual(abs(volume_qto - volume_calc), 0.01)
 
+
 class TestIFCGeneral(unittest.TestCase):   
-    
     def test_nominal_values_in_bounds(self):
         """XV.	Die Nominalwerte sämtlicher Eigenschaften mit Grenzwerten müssen innerhalb dieser Grenzen liegen"""
         elems = model.by_type("IfcPropertyBoundedValue")
