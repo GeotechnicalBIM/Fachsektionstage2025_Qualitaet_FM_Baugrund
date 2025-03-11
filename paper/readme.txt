@@ -1,0 +1,1 @@
+Für den Tagungsband ist ein Seitenlimit von 6 Seiten vorgegeben. Der ursprüngliche Beitrag umfasst knapp 8 Seiten und ist, neben der gekürzten Fassung, in diesem Repository zu finden. 
