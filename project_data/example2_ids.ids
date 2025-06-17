@@ -1,0 +1,71 @@
+<ids:ids xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://standards.buildingsmart.org/IDS http://standards.buildingsmart.org/IDS/1.0/ids.xsd" xmlns:ids="http://standards.buildingsmart.org/IDS">
+  <!--edited with usBIM.IDSeditor 2.3.8.0 (http://www.accasoftware.com)-->
+  <ids:info>
+    <ids:title>Beispiel_IDS_Geotechnik</ids:title>
+    <ids:version>1.0</ids:version>
+    <ids:description>Dokument zur Anforderungsdefinition an das Fachmodell Baugrund fuer den Anwendungsfall Geotechnische Berechnung</ids:description>
+    <ids:purpose>Anforderungsdefinition Fachmodell Baugrund</ids:purpose>
+  </ids:info>
+  <ids:specifications>
+    <ids:specification ifcVersion="IFC4X3_ADD2" name="Reibungswinkel Sande" identifier="0000_0001" description="Der Reibungswinkel eines Sandes liegt zwischen 27.5° und 35.0°.  &#xA;Als Sand gilt ein IFCGEOTECHNICALSTRATUM mit einem Material, dessen Bezeichung 'Sand' enthaelt (Gross- und Kleinschreibung wird nicht beachtet)" instructions="Der Fachplaner Geotechnik ist verantwortlich fuer die korrekte Angabe der bodenmechanischen Kenngroessen.">
+      <ids:applicability minOccurs="0" maxOccurs="unbounded">
+        <ids:entity>
+          <ids:name>
+            <ids:simpleValue>IFCGEOTECHNICALSTRATUM</ids:simpleValue>
+          </ids:name>
+        </ids:entity>
+        <ids:property>
+          <ids:propertySet>
+            <ids:simpleValue>Pset_SolidStratumCapacity</ids:simpleValue>
+          </ids:propertySet>
+          <ids:baseName>
+            <ids:simpleValue>FrictionAngle</ids:simpleValue>
+          </ids:baseName>
+        </ids:property>
+        <ids:material>
+          <ids:value>
+            <xs:restriction base="xs:string">
+              <xs:pattern value=".*[Ss][Aa][Nn][Dd].*" />
+            </xs:restriction>
+          </ids:value>
+        </ids:material>
+      </ids:applicability>
+      <ids:requirements>
+        <ids:property dataType="IFCPLANEANGLEMEASURE" cardinality="required" instructions="Konvertierung in Bogenmass, siehe dazu https://github.com/buildingSMART/IDS/blob/development/Documentation/UserManual/units.md">
+          <ids:propertySet>
+            <ids:simpleValue>Pset_SolidStratumCapacity</ids:simpleValue>
+          </ids:propertySet>
+          <ids:baseName>
+            <ids:simpleValue>FrictionAngle</ids:simpleValue>
+          </ids:baseName>
+          <ids:value>
+            <xs:restriction base="xs:double">
+              <xs:minInclusive value="0.48028" />
+              <xs:maxExclusive value="0.610866" />
+            </xs:restriction>
+          </ids:value>
+        </ids:property>
+      </ids:requirements>
+    </ids:specification>
+    <ids:specification ifcVersion="IFC4X3_ADD2" name="Enthaelt_Baugrundschicht_Sand" identifier="0000_0002" description="Das Baugrundschichtenmodell muss eine Baugrundschicht mit einem Material, dessen Bezeichnung 'Sand' enthaelt, beinhalten">
+      <ids:applicability minOccurs="1" maxOccurs="unbounded">
+        <ids:entity>
+          <ids:name>
+            <ids:simpleValue>IFCGEOTECHNICALSTRATUM</ids:simpleValue>
+          </ids:name>
+          <ids:predefinedType>
+            <ids:simpleValue>SOLID</ids:simpleValue>
+          </ids:predefinedType>
+        </ids:entity>
+        <ids:material>
+          <ids:value>
+            <xs:restriction base="xs:string">
+              <xs:pattern value=".*[Ss][Aa][Nn][Dd].*" />
+            </xs:restriction>
+          </ids:value>
+        </ids:material>
+      </ids:applicability>
+      <ids:requirements />
+    </ids:specification>
+  </ids:specifications>
+</ids:ids>
